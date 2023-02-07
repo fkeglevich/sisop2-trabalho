@@ -18,7 +18,6 @@ int main(int argc, char *argv[])
 	struct hostent *server;
 
 	char buffer[256];
-<<<<<<< HEAD
 
 /*
 
@@ -38,11 +37,8 @@ int main(int argc, char *argv[])
         exit(0);
 <<<<<<< HEAD
     }*/
-
-=======
-    }
 */
->>>>>>> ed638ddd983de0647b4f9a0d2d0f188046d0095b
+
 	if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
 		printf("ERROR opening socket");
 
