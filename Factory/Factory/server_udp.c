@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include "hosts.c"
+#include "client_udp.c"
 
 #define PORT 4000
 #define MAXCONNECTIONS 3
@@ -25,12 +26,12 @@ pthread_exit(NULL);
 
 int serverUDP()
 {
-	creating();
+	//creating();
 
-
+	struct pcInfo *newCon;
 	pthread_t tid;
 
-
+printf("hehehehe");
 	int i = 0;
 	int sockfd, n;
 	socklen_t clilen;
@@ -39,7 +40,7 @@ int serverUDP()
 		
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) 
 		printf("ERROR opening socket");
-
+printf("hehehehe");
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_port = htons(PORT);
 	serv_addr.sin_addr.s_addr = INADDR_ANY;
@@ -52,14 +53,25 @@ int serverUDP()
 	
 	while (1) {
 		HOST currentHost;
+		printf("hehehehe");
 		/* receive from socket */
-		n = recvfrom(sockfd, buf, 256, 0, (struct sockaddr *) &cli_addr, &clilen);
+		n = recvfrom(sockfd, newCon, sizeof(struct pcInfo), 0, (struct sockaddr *) &cli_addr, &clilen);
+		printf("hehehehe");
 		if (n < 0) 
-			printf("ERROR on recvfrom");
-	printf("Received a datagram: %s\n", buf);
-		
-		pthread_create(&tid, NULL, newConnectionThread, NULL);
+                {
+		printf("Received a datagram: %s\n", buf);
+	struct pcInfo aaaa = *newCon;
+	printf("Hostname: %s\n", aaaa.hostName);
+			
+			
+			
+			
+                }
+//			printf("ERROR on recvfrom");
+	
+//		pthread_create(&tid, NULL, newConnectionThread, NULL);
 
+		
 
 		/* send to socket */
 		n = sendto(sockfd, "Got your message\n", 17, 0,(struct sockaddr *) &cli_addr, sizeof(struct sockaddr));

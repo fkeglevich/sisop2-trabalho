@@ -7,7 +7,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include "client_udp.c"
 #include "server_udp.c"
 
 
