@@ -28,10 +28,10 @@ int serverUDP()
 {
 	//creating();
 
-	struct pcInfo *newCon;
+	struct pcInfo newCon;
 	pthread_t tid;
 
-printf("hehehehe");
+
 	int i = 0;
 	int sockfd, n;
 	socklen_t clilen;
@@ -40,7 +40,7 @@ printf("hehehehe");
 		
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) 
 		printf("ERROR opening socket");
-printf("hehehehe");
+
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_port = htons(PORT);
 	serv_addr.sin_addr.s_addr = INADDR_ANY;
@@ -53,20 +53,18 @@ printf("hehehehe");
 	
 	while (1) {
 		HOST currentHost;
-		printf("hehehehe");
 		/* receive from socket */
-		n = recvfrom(sockfd, newCon, sizeof(struct pcInfo), 0, (struct sockaddr *) &cli_addr, &clilen);
-		printf("hehehehe");
-		if (n < 0) 
-                {
+		n = recvfrom(sockfd, &newCon, sizeof(newCon), 0, (struct sockaddr *) &cli_addr, &clilen);
+
 		printf("Received a datagram: %s\n", buf);
-	struct pcInfo aaaa = *newCon;
-	printf("Hostname: %s\n", aaaa.hostName);
+	//struct pcInfo aaaa = *newCon;
+		printf("Hostname: %s\n", newCon.hostName);
+        printf("IP Address is  %s\n" , newCon.ipNumber);
 			
 			
 			
 			
-                }
+ 
 //			printf("ERROR on recvfrom");
 	
 //		pthread_create(&tid, NULL, newConnectionThread, NULL);

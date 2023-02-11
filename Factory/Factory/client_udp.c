@@ -15,8 +15,8 @@
 
 struct pcInfo
 {
-	char hostName[128];
-	char ipNumber[128];
+	char hostName[256];
+	char ipNumber[256];
 };
 
 void checkHostName(int hostname)
@@ -105,7 +105,7 @@ int clientUDP()
 	int enabled = 1;
 	setsockopt(sockfd,SOL_SOCKET,SO_BROADCAST,&enabled, sizeof(enabled));
 
-	n = sendto(sockfd, newCon, sizeof(struct pcInfo), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
+	n = sendto(sockfd, &newCon, sizeof(newCon), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
 	if (n < 0)
 		printf("ERROR sendto");
 
