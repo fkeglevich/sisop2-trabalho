@@ -58,8 +58,9 @@ int serverUDP()
 
 		printf("Received a datagram: %s\n", buf);
 	//struct pcInfo aaaa = *newCon;
-		printf("Hostname: %s\n", newCon.hostName);
-        printf("IP Address is  %s\n" , newCon.ipNumber);
+		printf("Hostname is: %s\n", newCon.hostName);
+        printf("IP Address is: %s\n" , newCon.ipNumber);
+        printf("Mac Address is: %s\n" , newCon.macAddress);
 			
 			
 			

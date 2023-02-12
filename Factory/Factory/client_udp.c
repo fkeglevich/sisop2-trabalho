@@ -10,6 +10,8 @@
 #include <sys/ioctl.h>
 #include <net/if.h>
 #include <errno.h>
+#include <sys/ioctl.h>
+#include <linux/if.h>
 
 #define PORT 4000
 
@@ -17,6 +19,7 @@ struct pcInfo
 {
 	char hostName[256];
 	char ipNumber[256];
+    char macAddress[256];
 };
 
 void checkHostName(int hostname)
@@ -28,19 +31,8 @@ void checkHostName(int hostname)
     }
 }
 
-
-// Function that get the hostname and the ip address and (in the future) the mac address and returns them in a struct for it to be sent to the server
-struct pcInfo printIPandName()
+char* getipNumber()
 {
-
-    char hostbuffer[256]; //This will store the hostname of this pc
-    int hostname;  
-    // To retrieve hostname
-    hostname = gethostname(hostbuffer, sizeof(hostbuffer));
-    checkHostName(hostname);
-
-    struct pcInfo newCon;
-
     int n;
 
     struct ifreq ifr;
@@ -62,13 +54,48 @@ struct pcInfo printIPandName()
     close(n);
 
     char *apapap = inet_ntoa(( (struct sockaddr_in *)&ifr.ifr_addr )->sin_addr);
+    return apapap;
+}
 
-    strcpy(newCon.hostName, hostbuffer);
-    strcpy(newCon.ipNumber, apapap);
-    
-    /*
-    printf("Hostname: %s\n", newCon.hostName);
-    printf("IP Address is %s - %s\n" , array , newCon.ipNumber);*/
+char* getMac()
+{
+    struct ifreq s;
+    int fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
+    char *macAd = "";
+
+    strcpy(s.ifr_name, "eth0");
+    if (0 == ioctl(fd, SIOCGIFHWADDR, &s)) {
+        int i;
+	    unsigned char* r = (unsigned char *) s.ifr_addr.sa_data;
+        sprintf(r,"%02x:%02x:%02x:%02x:%02x:%02x",(s.ifr_addr.sa_data[0] & 0xff),(s.ifr_addr.sa_data[1] & 0xff),(s.ifr_addr.sa_data[2] & 0xff),(s.ifr_addr.sa_data[3] & 0xff),(s.ifr_addr.sa_data[4] & 0xff),(s.ifr_addr.sa_data[5] & 0xff));
+        puts(r);
+        return r;
+    }
+
+    return macAd;
+
+}
+
+char* getHost()
+{
+    char hostbuffer[256]; //This will store the hostname of this pc
+    int hostname;  
+    // To retrieve hostname
+    hostname = gethostname(hostbuffer, sizeof(hostbuffer));
+    checkHostName(hostname);
+    char *hostNew = hostbuffer;
+    return hostNew;
+}
+
+// Function that get the hostname and the ip address and (in the future) the mac address and returns them in a struct for it to be sent to the server
+struct pcInfo printIPandName()
+{
+
+    struct pcInfo newCon;
+
+    strcpy(newCon.hostName, getHost());
+    strcpy(newCon.ipNumber, getipNumber());
+    strcpy(newCon.macAddress, getMac());
     
     return newCon;
 }
