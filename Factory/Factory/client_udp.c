@@ -13,7 +13,7 @@
 #include <sys/ioctl.h>
 #include <linux/if.h>
 
-#define PORT 4000
+#define PORT 40000
 #define PORTBROADCAST 5000
 
 struct pcInfo
@@ -130,11 +130,16 @@ int clientUDP()
 
 	printf("Received a datagram: %s\n", managerIP);
    
+   if(!strcmp(managerIP,"172.26.209.226"))
+   {
+		printf("It matches");
+   }
    
    // Now we need to get the simple message to transmit back to manager all pcInformation
    
 	close(sockfd);
     
+
 
    	struct pcInfo newCon = printIPandName();
 
@@ -142,7 +147,7 @@ int clientUDP()
     int sockfd2, n2;
 	unsigned int length;
 	struct sockaddr_in serv_addr2, from;
-	/*struct hostent *server;
+	struct hostent *server;
 
 
 
@@ -151,20 +156,26 @@ int clientUDP()
         fprintf(stderr,"ERROR, no such host\n");
         exit(0);
     }	
-	*/
-	if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
+	
+	if ((sockfd2 = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
 		printf("ERROR opening socket");
 	
-	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_port = htons(PORT);
-	serv_addr.sin_addr.s_addr = inet_addr(managerIP);
-	bzero(&(serv_addr.sin_zero), 8);
+	serv_addr2.sin_family = AF_INET;
+	serv_addr2.sin_port = htons(PORT);	
+	serv_addr2.sin_addr = *((struct in_addr *)server->h_addr);
+	
+	//serv_addr.sin_addr.s_addr = inet_addr("172.26.209.226");
+	bzero(&(serv_addr2.sin_zero), 8);
 
 
-
-
+/*
+	if (bind(sockfd2, (struct sockaddr *) &serv_addr2, sizeof(struct sockaddr)) < 0) 
+		printf("ERROR on binding");
+	fflush(stdout);
+*/
 	n2 = sendto(sockfd2, &newCon, sizeof(newCon), 0, (const struct sockaddr *) &serv_addr2, sizeof(struct sockaddr_in));
-   
+
+
 	close(sockfd2);
    
 /*  

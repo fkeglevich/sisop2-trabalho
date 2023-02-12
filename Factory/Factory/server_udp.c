@@ -10,7 +10,7 @@
 #include "hosts.c"
 #include "client_udp.c"
 
-#define PORT 4000
+#define PORT 40000
 #define PORTBROADCAST 5000
 #define MAXCONNECTIONS 3
 
@@ -46,49 +46,60 @@ void *caller()
 
 }
 
+
+
+
+
 int serverUDP()
 {
 	//creating();
 
 	struct pcInfo newCon;
-	pthread_t tid;
+	pthread_t tid, tidWait;
 
 	void *ret;
 	pthread_create( &tid, NULL ,  caller , NULL);
 
+
+
 	int i = 0;
-	int sockfd, n;
+	int sockfd2, n;
 	socklen_t clilen;
-	struct sockaddr_in serv_addr, cli_addr;
+	struct sockaddr_in serv_addr2, cli_addr;
 	char buf[256];
-		
-    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) 
+
+
+	
+    if ((sockfd2 = socket(AF_INET, SOCK_DGRAM, 0)) == -1) 
 		printf("ERROR opening socket");
 
-	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_port = htons(PORT);
-	serv_addr.sin_addr.s_addr = INADDR_ANY;
-	bzero(&(serv_addr.sin_zero), 8);    
-	 
-	if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(struct sockaddr)) < 0) 
+	serv_addr2.sin_family = AF_INET;
+	serv_addr2.sin_port = htons(PORT);
+	serv_addr2.sin_addr.s_addr = INADDR_ANY;
+	bzero(&(serv_addr2.sin_zero), 8);    
+
+	if (bind(sockfd2, (struct sockaddr *) &serv_addr2, sizeof(struct sockaddr)) < 0) 
 		printf("ERROR on binding");
-	
+
 	clilen = sizeof(struct sockaddr_in);
 
 	while (1) {
 		HOST currentHost;
 		
-		n = recvfrom(sockfd, &newCon, sizeof(newCon), 0, (struct sockaddr *) &cli_addr, &clilen);
-
-		//printf("Received a datagram: %s\n", buf);
-	//struct pcInfo aaaa = *newCon;
-		printf("Hostname is: %s\n", newCon.hostName);
+		n = recvfrom(sockfd2, &newCon, sizeof(newCon), 0, (struct sockaddr *) &cli_addr, &clilen);
 	
- 	      printf("IP Address is: %s\n" , newCon.ipNumber);
+		//printf("Received a datagram: %s\n", buf);
+		//struct pcInfo aaaa = *newCon;
+		printf("Hostname is: %s\n", newCon.hostName);//newCon.hostName);
+		fflush(stdout);
+ 	    printf("IP Address is: %s\n" , newCon.ipNumber);
+		fflush(stdout);
         printf("Mac Address is: %s\n" , newCon.macAddress);
-			
+		fflush(stdout);
 	}	
-			
+	
+
+
 	/* 		
  
 //			printf("ERROR on recvfrom");
@@ -102,10 +113,12 @@ int serverUDP()
 
 	}
 	*/	
-	close(sockfd);
+	
+	
+	//close(sockfd);
 
 	
-	pthread_join(tid, ret);
+	//pthread_join(tid, ret);
 
 	return 0;
 }
