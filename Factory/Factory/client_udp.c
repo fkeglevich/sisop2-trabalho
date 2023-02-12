@@ -14,6 +14,7 @@
 #include <linux/if.h>
 
 #define PORT 4000
+#define PORTBROADCAST 5000
 
 struct pcInfo
 {
@@ -104,6 +105,71 @@ struct pcInfo printIPandName()
 //int main(int argc, char *argv[])
 int clientUDP()
 {
+    // This first part of the program will get the message broadcasted by the manager to get the ip of the machine
+    int i = 0;
+	int sockfd, n;
+	socklen_t clilen;
+	struct sockaddr_in serv_addr, cli_addr;
+	char managerIP[256];
+		
+    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) 
+		printf("ERROR opening socket");
+
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_port = htons(PORTBROADCAST);
+	serv_addr.sin_addr.s_addr = INADDR_ANY;
+	bzero(&(serv_addr.sin_zero), 8);    
+	 
+	if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(struct sockaddr)) < 0) 
+		printf("ERROR on binding");
+	
+	clilen = sizeof(struct sockaddr_in);
+	
+    int f = 1;
+    n = recvfrom(sockfd, managerIP, sizeof(managerIP), 0, (struct sockaddr *) &cli_addr, &clilen);
+
+	printf("Received a datagram: %s\n", managerIP);
+   
+   
+   // Now we need to get the simple message to transmit back to manager all pcInformation
+   
+	close(sockfd);
+    
+
+   	struct pcInfo newCon = printIPandName();
+
+
+    int sockfd2, n2;
+	unsigned int length;
+	struct sockaddr_in serv_addr2, from;
+	/*struct hostent *server;
+
+
+
+	server = gethostbyname(managerIP);
+	if (server == NULL) {
+        fprintf(stderr,"ERROR, no such host\n");
+        exit(0);
+    }	
+	*/
+	if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
+		printf("ERROR opening socket");
+	
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_port = htons(PORT);
+	serv_addr.sin_addr.s_addr = inet_addr(managerIP);
+	bzero(&(serv_addr.sin_zero), 8);
+
+
+
+
+	n2 = sendto(sockfd2, &newCon, sizeof(newCon), 0, (const struct sockaddr *) &serv_addr2, sizeof(struct sockaddr_in));
+   
+	close(sockfd2);
+   
+/*  
+	
+ 
 	struct pcInfo newCon = printIPandName();
         char array[] = "eth0";
         printf("Hostname: %s\n", newCon.hostName);
@@ -144,5 +210,6 @@ int clientUDP()
 	printf("Got an ack: %s\n", buffer);
 
 	close(sockfd);
+    */
 	return 0;
 }

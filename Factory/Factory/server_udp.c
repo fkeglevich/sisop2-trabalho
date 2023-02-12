@@ -11,16 +11,38 @@
 #include "client_udp.c"
 
 #define PORT 4000
+#define PORTBROADCAST 5000
 #define MAXCONNECTIONS 3
 
 
-void *newConnectionThread()
+void *caller()
 {
-printf("oi");
-static int connections = 0;
+	char ipAd[256];
+    int sockfd, n;
+	unsigned int length;
+	struct sockaddr_in serv_addr, from;
+	struct hostent *server;
 
-printf("new thread, connections made =%d", ++connections);
-pthread_exit(NULL);
+	char buffer[256];
+
+    strcpy(ipAd, getipNumber());
+
+	if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
+		printf("ERROR opening socket");
+
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_port = htons(PORTBROADCAST);
+	serv_addr.sin_addr.s_addr = inet_addr("255.255.255.255");
+	bzero(&(serv_addr.sin_zero), 8);
+
+	int enabled = 1;
+	setsockopt(sockfd,SOL_SOCKET,SO_BROADCAST,&enabled, sizeof(enabled));
+	while(1)
+	{
+		n = sendto(sockfd, ipAd, sizeof(ipAd), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
+		sleep(3);
+	}
+	pthread_exit(NULL);
 
 }
 
@@ -31,6 +53,8 @@ int serverUDP()
 	struct pcInfo newCon;
 	pthread_t tid;
 
+	void *ret;
+	pthread_create( &tid, NULL ,  caller , NULL);
 
 	int i = 0;
 	int sockfd, n;
@@ -50,36 +74,39 @@ int serverUDP()
 		printf("ERROR on binding");
 	
 	clilen = sizeof(struct sockaddr_in);
-	
+
 	while (1) {
 		HOST currentHost;
-		/* receive from socket */
+		
 		n = recvfrom(sockfd, &newCon, sizeof(newCon), 0, (struct sockaddr *) &cli_addr, &clilen);
 
-		printf("Received a datagram: %s\n", buf);
+		//printf("Received a datagram: %s\n", buf);
 	//struct pcInfo aaaa = *newCon;
 		printf("Hostname is: %s\n", newCon.hostName);
-        printf("IP Address is: %s\n" , newCon.ipNumber);
+	
+ 	      printf("IP Address is: %s\n" , newCon.ipNumber);
         printf("Mac Address is: %s\n" , newCon.macAddress);
 			
+	}	
 			
-			
-			
+	/* 		
  
 //			printf("ERROR on recvfrom");
 	
 //		pthread_create(&tid, NULL, newConnectionThread, NULL);
 
 		
-
-		/* send to socket */
 		n = sendto(sockfd, "Got your message\n", 17, 0,(struct sockaddr *) &cli_addr, sizeof(struct sockaddr));
 		if (n  < 0) 
 			printf("ERROR on sendto");
 
 	}
-	
+	*/	
 	close(sockfd);
+
+	
+	pthread_join(tid, ret);
+
 	return 0;
 }
 
