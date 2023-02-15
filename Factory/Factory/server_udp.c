@@ -7,6 +7,7 @@
 #include <netdb.h>
 #include <stdio.h>
 #include <pthread.h>
+#include <sys/select.h>
 #include "hosts.c"
 #include "client_udp.c"
 
@@ -14,6 +15,7 @@
 #define PORTBROADCAST 5000
 #define PORTTHREAD 10000
 #define MAXCONNECTIONS 3
+
 
 
 void *caller()
@@ -67,9 +69,11 @@ void *requestStatus(void* pcDetails)
 
 	char buffer[256];
 
-	int currentPort = PORTTHREAD + (clientInfo->pos * 1000);
+	int currentPort = PORTTHREAD + (clientInfo->pos * 2000);
 
 	
+	printf("\n%i\n", currentPort);
+	fflush(stdout);
 
 	server = gethostbyname(clientInfo->ipNumber);
 	
@@ -86,14 +90,14 @@ void *requestStatus(void* pcDetails)
 		printf("ERROR opening socket");
 	
 	serv_addr_send.sin_family = AF_INET;
-	serv_addr_send.sin_port = htons(PORTTHREAD);	
+	serv_addr_send.sin_port = htons(currentPort);	
 	serv_addr_send.sin_addr = *((struct in_addr *)server->h_addr);
 	
 	//serv_addr.sin_addr.s_addr = inet_addr("172.26.209.226");
 	bzero(&(serv_addr_send.sin_zero), 8);
 
 	serv_addr_recv.sin_family = AF_INET;
-	serv_addr_recv.sin_port = htons(PORTTHREAD + 1000);	
+	serv_addr_recv.sin_port = htons(currentPort + 1000);	
 	serv_addr_recv.sin_addr = *((struct in_addr *)server->h_addr);
 	
 	//serv_addr.sin_addr.s_addr = inet_addr("172.26.209.226");
@@ -102,15 +106,38 @@ void *requestStatus(void* pcDetails)
 	if (bind(sockfd2, (struct sockaddr *) &serv_addr_recv, sizeof(struct sockaddr)) < 0) 
 		printf("ERROR on binding");
 
+	struct timeval tv;	
+	tv.tv_sec = 1;
+	tv.tv_usec = 0;
+
+	int control = 0;
+
+	if (setsockopt(sockfd2, SOL_SOCKET, SO_RCVTIMEO,&tv,sizeof(tv)) < 0) {
+	    perror("Error");
+	}	
+
 	while(1)
 	{
 		sleep(2);
 		n = sendto(sockfd, "Are you awake?", sizeof("Are you awake?"), 0, (const struct sockaddr *) &serv_addr_send, sizeof(struct sockaddr_in));
 
+		bzero(&(buffer),256);
 		n = recvfrom(sockfd2, buffer, sizeof(buffer), 0, (struct sockaddr *) &serv_addr_recv, &clilen);
-		printf("received message: %s\n", buffer);
+		if(!(strcmp(buffer, "I'm awake")))
+		{
+			control = 0;
+			printf("received message: %s\n", buffer);
+		}
+		else
+		{
+			control++;
+			if(control > 2)
+				printf("sleeping");
+		}
 		fflush(stdout);
 	}
+
+	printf("\nended connection\n");
 	pthread_exit(NULL);
 
 }
@@ -153,11 +180,13 @@ int serverUDP()
 
 	int availablePos = 2; //Change value later for 0, is going to be changed with new function
 
+
 	while (1) {
 		HOST currentHost;
 		
 		n = recvfrom(sockfd2, &newCon, sizeof(newCon), 0, (struct sockaddr *) &cli_addr, &clilen);
 
+		newCon.pos = availablePos;
 
 		n = sendto(sockfd2, &availablePos, sizeof(availablePos), 0,(struct sockaddr *) &cli_addr, sizeof(struct sockaddr));
 

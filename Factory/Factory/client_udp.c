@@ -117,9 +117,10 @@ void *sendStatus(void* pcDetails)
 
 
 
-	int currentPort = PORTTHREAD + (clientInfo->pos * 1000);
+	int currentPort = PORTTHREAD + (clientInfo->pos * 2000);
 
-
+	printf("\n%i\n", currentPort);
+	fflush(stdout);
 
     int k = 0;
 	int sockfd3, sockfd, n3;
@@ -133,7 +134,7 @@ void *sendStatus(void* pcDetails)
 		printf("ERROR opening socket");
 
 	serv_addr3.sin_family = AF_INET;
-	serv_addr3.sin_port = htons(PORTTHREAD);
+	serv_addr3.sin_port = htons(currentPort);
 	serv_addr3.sin_addr.s_addr = INADDR_ANY;
 	bzero(&(serv_addr3.sin_zero), 8);    
 	 
@@ -144,7 +145,7 @@ void *sendStatus(void* pcDetails)
 		printf("ERROR opening socket");
 
 	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_port = htons(PORTTHREAD + 1000);
+	serv_addr.sin_port = htons(currentPort + 1000);
 	serv_addr.sin_addr = *((struct in_addr *)server->h_addr);
 	bzero(&(serv_addr.sin_zero), 8);   
 
@@ -159,7 +160,7 @@ void *sendStatus(void* pcDetails)
     	n3 = recvfrom(sockfd3, buffer, sizeof(buffer), 0, (struct sockaddr *) &cli_addr3, &clilen3);
 		printf("Received a datagram: %s\n", buffer);
 		n3 = sendto(sockfd, "I'm awake", sizeof("I'm awake"), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
-
+	
 	}
 	pthread_exit(NULL);
 
