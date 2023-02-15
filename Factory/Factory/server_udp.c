@@ -8,8 +8,9 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <sys/select.h>
-#include "hosts.c"
+//#include "hosts.c"
 #include "client_udp.c"
+#include "table.c"
 
 #define PORT 40000
 #define PORTBROADCAST 5000
@@ -54,12 +55,6 @@ void *caller()
 void *requestStatus(void* pcDetails)
 {
 	struct pcInfo *clientInfo = pcDetails;
-
-	//printf(clientInfo->hostName);
-	//printf(clientInfo->ipNumber);
-	//printf(clientInfo->macAddress);
-	//printf(" position: %i\n",clientInfo->pos);
-	//fflush(stdout);
 
     int sockfd, sockfd2, n;
 	unsigned int length;
@@ -125,6 +120,8 @@ void *requestStatus(void* pcDetails)
 		n = recvfrom(sockfd2, buffer, sizeof(buffer), 0, (struct sockaddr *) &serv_addr_recv, &clilen);
 		if(!(strcmp(buffer, "I'm awake")))
 		{
+			//if(control > 0)
+				////////////////////////////////TODO: INSERT FUNCTION TO CHANGE STATUS TO AWAKE
 			control = 0;
 			printf("received message: %s\n", buffer);
 		}
@@ -132,7 +129,10 @@ void *requestStatus(void* pcDetails)
 		{
 			control++;
 			if(control > 2)
+			{
 				printf("sleeping");
+				//////////////////////////////////TODO:insert function to change status to sleep
+			}
 		}
 		fflush(stdout);
 	}
@@ -145,6 +145,8 @@ void *requestStatus(void* pcDetails)
 
 int serverUDP()
 {
+	
+    init_table();
 	//creating();
 
 	struct pcInfo newCon;
@@ -184,23 +186,33 @@ int serverUDP()
 	while (1) {
 		HOST currentHost;
 		
+		//bzero(&(newCon), sizeof(struct pcInfo));
+
 		n = recvfrom(sockfd2, &newCon, sizeof(newCon), 0, (struct sockaddr *) &cli_addr, &clilen);
+
+		currentHost = create_host(newCon.hostName, newCon.macAddress, newCon.ipNumber, AWAKEN);
+
+
+		availablePos = insertHost(currentHost);
 
 		newCon.pos = availablePos;
 
 		n = sendto(sockfd2, &availablePos, sizeof(availablePos), 0,(struct sockaddr *) &cli_addr, sizeof(struct sockaddr));
 
-		//printf("Hostname is: %s\n", newCon.hostName);//newCon.hostName);
- 	    //printf("IP Address is: %s\n" , newCon.ipNumber);
-        //printf("Mac Address is: %s\n" , newCon.macAddress);
-		//fflush(stdout);
-		
-		pthread_create( &tidWait, NULL ,  requestStatus , (void *)&newCon);
+
+		if(availablePos >= 0)
+		{
+			pthread_create( &tidWait, NULL ,  requestStatus , (void *)&newCon);
+			
+			printTable();
+		////////////////////////////////////////////////////////////////////TODO: INSERT FUNCTION TO PRINT TABLE
+			fflush(stdout);
+		}
 	}	
 	
 
 
-
+	destroy_mutex();
 
 	return 0;
 }

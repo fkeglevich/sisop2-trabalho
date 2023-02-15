@@ -3,7 +3,7 @@
 
 #define ASLEEP 0
 #define AWAKEN 1
-#define TABLE_SIZE 20
+#define TABLE_SIZE 3
 #define CHAR_MAX 256
 
 typedef struct host_struct {
@@ -15,6 +15,10 @@ typedef struct host_struct {
 } HOST;
 
 HOST table[TABLE_SIZE];
+
+// MUTEX CODE BEGIN
+pthread_mutex_t lock;
+// MUTEX CODE END
 
 char* status_to_text(int status){
 
@@ -28,6 +32,7 @@ char* status_to_text(int status){
 
 int get_next_free_id()
 {
+    //Note: no need to lock here!
     int i;
     for (i = 0; i < TABLE_SIZE; i++) {
         if (table[i].index == -1) {
@@ -48,28 +53,61 @@ HOST create_host(const char* hostname, const char* macadd, const char* ipadd, in
     return host;
 }
 
+void init_mutex() {
+    // MUTEX CODE BEGIN    
+    int ret = pthread_mutex_init(&lock, NULL);
+    if (ret != 0) {
+        printf("Error creating mutex: %d\n", ret);
+        fflush(stdout);
+    }
+    // MUTEX CODE END
+}
+
+void destroy_mutex()
+{
+    // MUTEX CODE BEGIN
+    pthread_mutex_destroy(&lock);
+    // MUTEX CODE END
+}
+
 void init_table()
 {
+    init_mutex();
+
+    // MUTEX CODE BEGIN
+    pthread_mutex_lock(&lock);
     int i;
     for (i=0; i<TABLE_SIZE; i++) {
         table[i] = create_host("", "", "", AWAKEN);
     }
+    pthread_mutex_unlock(&lock);
+    // MUTEX CODE END
 }
 
 int insertHost(HOST host)
 {
+    // MUTEX CODE BEGIN
+    pthread_mutex_lock(&lock);
+
     int id = get_next_free_id();
     if (id == -1) {
         return -1; //No free ID, table is FULL!
     }
     table[id] = host;
     table[id].index = id;
+
+    pthread_mutex_unlock(&lock);
+    // MUTEX CODE END
     return id;
 }
 
 void removeHost(int id)
 {
+    // MUTEX CODE BEGIN
+    pthread_mutex_lock(&lock);
     table[id] = create_host("", "", "", AWAKEN);
+    pthread_mutex_unlock(&lock);
+    // MUTEX CODE END
 }
 
 void printHost(HOST host)
@@ -77,20 +115,28 @@ void printHost(HOST host)
     printf("Host hostname: %s ipaddress: %s macaddress: %s status: %s index: %d\n", host.hostname, host.ipadd, host.macadd, status_to_text(host.status), host.index);
 }
 
-int main() {
-
-    init_table();
-    HOST host = create_host("aaaaasda", "mac", "ipeh", 1);
-    // printHost(host);
-
-
-    int index = insertHost(host);
-    printHost(host);
-	printHost(table[index]);
-
-    removeHost(0);
-
-    printHost(table[index]);
-
-    return 0;
+void printTable() {
+    int i;
+    for (i=0; i<TABLE_SIZE; i++) {
+        if(table[i].index > -1)
+            printHost(table[i]);
+    }
 }
+
+// int main() {
+
+//     init_table();
+//     HOST host = create_host("aaaaasda", "mac", "ipeh", 1);
+//     // printHost(host);
+
+
+//     int index = insertHost(host);
+//     printHost(host);
+// 	printHost(table[index]);
+
+//     removeHost(0);
+
+//     printHost(table[index]);
+
+//     return 0;
+// }

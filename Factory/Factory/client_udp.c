@@ -245,7 +245,7 @@ int clientUDP()
 
 	///////////////////////////////// end of first send, start of second receive////////////////////////////////////
 
-	if(newCon.pos < 1)
+	if(newCon.pos < 0)
 	{
 		printf("The server is already full, Please try to connect again later.\nExiting process...");
 	}
