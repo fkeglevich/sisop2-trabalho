@@ -12,6 +12,7 @@
 
 #define PORT 40000
 #define PORTBROADCAST 5000
+#define PORTTHREAD 10000
 #define MAXCONNECTIONS 3
 
 
@@ -48,6 +49,58 @@ void *caller()
 
 
 
+void *requestStatus(void* pcDetails)
+{
+	struct pcInfo *clientInfo = pcDetails;
+
+	
+
+	printf(clientInfo->hostName);
+	printf(clientInfo->ipNumber);
+	printf(clientInfo->macAddress);
+	printf("%i",clientInfo->pos);
+	fflush(stdout);
+
+
+
+
+    int sockfd, n;
+	unsigned int length;
+	struct sockaddr_in serv_addr, from;
+	struct hostent *server;
+
+	char buffer[256];
+
+	//if(newFunction())
+
+	//int currentPort = 
+
+	server = gethostbyname(clientInfo->ipNumber);
+	
+
+	if (server == NULL) {
+        fprintf(stderr,"ERROR, no such host\n");
+        exit(0);
+    }	
+	
+	if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
+		printf("ERROR opening socket");
+	
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_port = htons(PORTTHREAD);	
+	serv_addr.sin_addr = *((struct in_addr *)server->h_addr);
+	
+	//serv_addr.sin_addr.s_addr = inet_addr("172.26.209.226");
+	bzero(&(serv_addr.sin_zero), 8);
+
+
+	printf("\n Started Sending\n");
+	fflush(stdout);
+	n = sendto(sockfd, "its sending Back", sizeof("its sending Back"), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
+
+	pthread_exit(NULL);
+
+}
 
 
 int serverUDP()
@@ -55,11 +108,13 @@ int serverUDP()
 	//creating();
 
 	struct pcInfo newCon;
-	pthread_t tid, tidWait;
+	pthread_t tid, tidWait;//, manut[MAXCONNECTIONS];
 
 	void *ret;
-	pthread_create( &tid, NULL ,  caller , NULL);
+	pthread_create( &tid, NULL ,  caller , NULL);//pthread_create( &tid, NULL ,  requestStatus , (void *)newCon);
 
+
+	
 
 
 	int i = 0;
@@ -92,33 +147,17 @@ int serverUDP()
 		//struct pcInfo aaaa = *newCon;
 		printf("Hostname is: %s\n", newCon.hostName);//newCon.hostName);
 		fflush(stdout);
- 	    printf("IP Address is: %s\n" , newCon.ipNumber);
-		fflush(stdout);
-        printf("Mac Address is: %s\n" , newCon.macAddress);
-		fflush(stdout);
+ 	    //printf("IP Address is: %s\n" , newCon.ipNumber);
+		//fflush(stdout);
+        //printf("Mac Address is: %s\n" , newCon.macAddress);
+		//fflush(stdout);
+		
+		pthread_create( &tidWait, NULL ,  requestStatus , (void *)&newCon);
 	}	
 	
 
 
-	/* 		
- 
-//			printf("ERROR on recvfrom");
-	
-//		pthread_create(&tid, NULL, newConnectionThread, NULL);
 
-		
-		n = sendto(sockfd, "Got your message\n", 17, 0,(struct sockaddr *) &cli_addr, sizeof(struct sockaddr));
-		if (n  < 0) 
-			printf("ERROR on sendto");
-
-	}
-	*/	
-	
-	
-	//close(sockfd);
-
-	
-	//pthread_join(tid, ret);
 
 	return 0;
 }

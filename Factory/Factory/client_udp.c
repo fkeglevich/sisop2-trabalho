@@ -15,13 +15,15 @@
 
 #define PORT 40000
 #define PORTBROADCAST 5000
+#define PORTTHREAD 10000
 
 struct pcInfo
 {
 	char hostName[256];
 	char ipNumber[256];
     char macAddress[256];
-};
+	int pos;
+} ;
 
 void checkHostName(int hostname)
 {
@@ -97,7 +99,7 @@ struct pcInfo printIPandName()
     strcpy(newCon.hostName, getHost());
     strcpy(newCon.ipNumber, getipNumber());
     strcpy(newCon.macAddress, getMac());
-    
+	newCon.pos = 0;
     return newCon;
 }
 
@@ -106,7 +108,7 @@ struct pcInfo printIPandName()
 int clientUDP()
 {
     // This first part of the program will get the message broadcasted by the manager to get the ip of the machine
-    int i = 0;
+    //int i = 0;
 	int sockfd, n;
 	socklen_t clilen;
 	struct sockaddr_in serv_addr, cli_addr;
@@ -129,16 +131,12 @@ int clientUDP()
     n = recvfrom(sockfd, managerIP, sizeof(managerIP), 0, (struct sockaddr *) &cli_addr, &clilen);
 
 	printf("Received a datagram: %s\n", managerIP);
-   
-   if(!strcmp(managerIP,"172.26.209.226"))
-   {
-		printf("It matches");
-   }
+ 
    
    // Now we need to get the simple message to transmit back to manager all pcInformation
    
 	close(sockfd);
-    
+    ////////////////////////////////end of first receive, start of first send////////////////////////////////
 
 
    	struct pcInfo newCon = printIPandName();
@@ -168,59 +166,37 @@ int clientUDP()
 	bzero(&(serv_addr2.sin_zero), 8);
 
 
-/*
-	if (bind(sockfd2, (struct sockaddr *) &serv_addr2, sizeof(struct sockaddr)) < 0) 
-		printf("ERROR on binding");
-	fflush(stdout);
-*/
 	n2 = sendto(sockfd2, &newCon, sizeof(newCon), 0, (const struct sockaddr *) &serv_addr2, sizeof(struct sockaddr_in));
 
 
 	close(sockfd2);
+
+
+	///////////////////////////////// end of first send, start of second receive////////////////////////////////////
    
-/*  
-	
- 
-	struct pcInfo newCon = printIPandName();
-        char array[] = "eth0";
-        printf("Hostname: %s\n", newCon.hostName);
-        printf("IP Address is %s - %s\n" , array , newCon.ipNumber);
-
-        int sockfd, n;
-	unsigned int length;
-	struct sockaddr_in serv_addr, from;
-	struct hostent *server;
-
+   int k = 0;
+	int sockfd3, n3;
+	socklen_t clilen3;
+	struct sockaddr_in serv_addr3, cli_addr3;
 	char buffer[256];
-
-	unsigned char *test = (unsigned char *)&newCon;
-
-	if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
+		
+    if ((sockfd3 = socket(AF_INET, SOCK_DGRAM, 0)) == -1) 
 		printf("ERROR opening socket");
 
-	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_port = htons(PORT);
-	serv_addr.sin_addr.s_addr = inet_addr("255.255.255.255");
-	bzero(&(serv_addr.sin_zero), 8);
+	serv_addr3.sin_family = AF_INET;
+	serv_addr3.sin_port = htons(PORTTHREAD);
+	serv_addr3.sin_addr.s_addr = INADDR_ANY;
+	bzero(&(serv_addr3.sin_zero), 8);    
+	 
+	if (bind(sockfd3, (struct sockaddr *) &serv_addr3, sizeof(struct sockaddr)) < 0) 
+		printf("ERROR on binding");
+	
+	clilen3 = sizeof(struct sockaddr_in);
+	
 
-	printf("Enter the message: ");
-	bzero(buffer, 256);
-	fgets(buffer, 256, stdin);
-	int enabled = 1;
-	setsockopt(sockfd,SOL_SOCKET,SO_BROADCAST,&enabled, sizeof(enabled));
+    n3 = recvfrom(sockfd3, buffer, sizeof(buffer), 0, (struct sockaddr *) &cli_addr3, &clilen3);
 
-	n = sendto(sockfd, &newCon, sizeof(newCon), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
-	if (n < 0)
-		printf("ERROR sendto");
+	printf("Received a datagram: %s\n", buffer);
 
-	length = sizeof(struct sockaddr_in);
-	n = recvfrom(sockfd, buffer, 256, 0, (struct sockaddr *) &from, &length);
-	if (n < 0)
-		printf("ERROR recvfrom");
-
-	printf("Got an ack: %s\n", buffer);
-
-	close(sockfd);
-    */
 	return 0;
 }
