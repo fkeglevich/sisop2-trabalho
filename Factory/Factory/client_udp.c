@@ -194,7 +194,7 @@ int clientUDP()
 	printf("Received a datagram: %s\n", managerIP);
  
    
-   // Now we need to get the simple message to transmit back to manager all pcInformation
+   	// Now we need to get the simple message to transmit back to manager all pcInformation
    
 	close(sockfd);
     ////////////////////////////////end of first receive, start of first send////////////////////////////////

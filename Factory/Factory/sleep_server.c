@@ -9,14 +9,12 @@
 #include <string.h>
 #include "server_udp.c"
 
-
 int main(int argc, char *argv[])
 {
-if((argc > 1) && (!strcmp(argv[1],"manager")))
-	serverUDP();
-else
-	clientUDP();
+	if((argc > 1) && (!strcmp(argv[1],"manager")))
+		serverUDP();
+	else
+		clientUDP();
 
-
-return 0;
+	return 0;
 }
