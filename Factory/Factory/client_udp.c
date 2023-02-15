@@ -104,6 +104,67 @@ struct pcInfo printIPandName()
 }
 
 
+
+void *sendStatus(void* pcDetails)
+{
+	struct pcInfo *clientInfo = pcDetails;
+
+	//printf(clientInfo->hostName);
+	//printf(clientInfo->ipNumber);
+	//printf(clientInfo->macAddress);
+	//printf(" position: %i\n",clientInfo->pos);
+	//fflush(stdout);
+
+
+
+	int currentPort = PORTTHREAD + (clientInfo->pos * 1000);
+
+
+
+    int k = 0;
+	int sockfd3, sockfd, n3;
+	socklen_t clilen3;
+	struct sockaddr_in serv_addr3, serv_addr, cli_addr3;
+	char buffer[256];
+	struct hostent *server;
+		
+	server = gethostbyname(clientInfo->ipNumber);
+    if ((sockfd3 = socket(AF_INET, SOCK_DGRAM, 0)) == -1) 
+		printf("ERROR opening socket");
+
+	serv_addr3.sin_family = AF_INET;
+	serv_addr3.sin_port = htons(PORTTHREAD);
+	serv_addr3.sin_addr.s_addr = INADDR_ANY;
+	bzero(&(serv_addr3.sin_zero), 8);    
+	 
+	if (bind(sockfd3, (struct sockaddr *) &serv_addr3, sizeof(struct sockaddr)) < 0) 
+		printf("ERROR on binding");
+
+	if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) 
+		printf("ERROR opening socket");
+
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_port = htons(PORTTHREAD + 1000);
+	serv_addr.sin_addr = *((struct in_addr *)server->h_addr);
+	bzero(&(serv_addr.sin_zero), 8);   
+
+	
+	//if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(struct sockaddr)) < 0) 
+	//	printf("ERROR on binding hereeeee");
+	
+	clilen3 = sizeof(struct sockaddr_in);
+	
+	while(1)
+	{
+    	n3 = recvfrom(sockfd3, buffer, sizeof(buffer), 0, (struct sockaddr *) &cli_addr3, &clilen3);
+		printf("Received a datagram: %s\n", buffer);
+		n3 = sendto(sockfd, "I'm awake", sizeof("I'm awake"), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
+
+	}
+	pthread_exit(NULL);
+
+}
+
 //int main(int argc, char *argv[])
 int clientUDP()
 {
@@ -146,7 +207,7 @@ int clientUDP()
 	unsigned int length;
 	struct sockaddr_in serv_addr2, from;
 	struct hostent *server;
-
+	pthread_t tid;
 
 
 	server = gethostbyname(managerIP);
@@ -165,38 +226,42 @@ int clientUDP()
 	//serv_addr.sin_addr.s_addr = inet_addr("172.26.209.226");
 	bzero(&(serv_addr2.sin_zero), 8);
 
+	int availablePos;
 
 	n2 = sendto(sockfd2, &newCon, sizeof(newCon), 0, (const struct sockaddr *) &serv_addr2, sizeof(struct sockaddr_in));
 
+			
+	n = recvfrom(sockfd2, &availablePos, sizeof(availablePos), 0, (struct sockaddr *) &cli_addr, &clilen);
+
+	newCon.pos = availablePos;
+
+	//int threadPort = PORTTHREAD + (1000 * availablePos);
+
+	printf("\n new port: %i", newCon.pos);
 
 	close(sockfd2);
 
 
 	///////////////////////////////// end of first send, start of second receive////////////////////////////////////
-   
-   int k = 0;
-	int sockfd3, n3;
-	socklen_t clilen3;
-	struct sockaddr_in serv_addr3, cli_addr3;
-	char buffer[256];
-		
-    if ((sockfd3 = socket(AF_INET, SOCK_DGRAM, 0)) == -1) 
-		printf("ERROR opening socket");
 
-	serv_addr3.sin_family = AF_INET;
-	serv_addr3.sin_port = htons(PORTTHREAD);
-	serv_addr3.sin_addr.s_addr = INADDR_ANY;
-	bzero(&(serv_addr3.sin_zero), 8);    
-	 
-	if (bind(sockfd3, (struct sockaddr *) &serv_addr3, sizeof(struct sockaddr)) < 0) 
-		printf("ERROR on binding");
-	
-	clilen3 = sizeof(struct sockaddr_in);
-	
+	if(newCon.pos < 1)
+	{
+		printf("The server is already full, Please try to connect again later.\nExiting process...");
+	}
+	else
+	{
+		// Started thread to send messages while the machine is awake
+		pthread_create( &tid, NULL ,  sendStatus , (void *)&newCon);
 
-    n3 = recvfrom(sockfd3, buffer, sizeof(buffer), 0, (struct sockaddr *) &cli_addr3, &clilen3);
+		// while que recebe inputs do usuário até que ele digite exit
+		char input[256];
+		while(strcmp(input, "exit\n"))
+		{
+			bzero(input, 256);
+			fgets(input, 256, stdin);
+		}
 
-	printf("Received a datagram: %s\n", buffer);
-
+		printf("exiting process...\n");
+	}
 	return 0;
 }

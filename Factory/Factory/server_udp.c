@@ -53,27 +53,23 @@ void *requestStatus(void* pcDetails)
 {
 	struct pcInfo *clientInfo = pcDetails;
 
-	
+	//printf(clientInfo->hostName);
+	//printf(clientInfo->ipNumber);
+	//printf(clientInfo->macAddress);
+	//printf(" position: %i\n",clientInfo->pos);
+	//fflush(stdout);
 
-	printf(clientInfo->hostName);
-	printf(clientInfo->ipNumber);
-	printf(clientInfo->macAddress);
-	printf("%i",clientInfo->pos);
-	fflush(stdout);
-
-
-
-
-    int sockfd, n;
+    int sockfd, sockfd2, n;
 	unsigned int length;
-	struct sockaddr_in serv_addr, from;
+	struct sockaddr_in serv_addr_send, serv_addr_recv, cli_addr;
+	socklen_t clilen;
 	struct hostent *server;
 
 	char buffer[256];
 
-	//if(newFunction())
+	int currentPort = PORTTHREAD + (clientInfo->pos * 1000);
 
-	//int currentPort = 
+	
 
 	server = gethostbyname(clientInfo->ipNumber);
 	
@@ -85,19 +81,36 @@ void *requestStatus(void* pcDetails)
 	
 	if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
 		printf("ERROR opening socket");
+
+	if ((sockfd2 = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
+		printf("ERROR opening socket");
 	
-	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_port = htons(PORTTHREAD);	
-	serv_addr.sin_addr = *((struct in_addr *)server->h_addr);
+	serv_addr_send.sin_family = AF_INET;
+	serv_addr_send.sin_port = htons(PORTTHREAD);	
+	serv_addr_send.sin_addr = *((struct in_addr *)server->h_addr);
 	
 	//serv_addr.sin_addr.s_addr = inet_addr("172.26.209.226");
-	bzero(&(serv_addr.sin_zero), 8);
+	bzero(&(serv_addr_send.sin_zero), 8);
 
+	serv_addr_recv.sin_family = AF_INET;
+	serv_addr_recv.sin_port = htons(PORTTHREAD + 1000);	
+	serv_addr_recv.sin_addr = *((struct in_addr *)server->h_addr);
+	
+	//serv_addr.sin_addr.s_addr = inet_addr("172.26.209.226");
+	bzero(&(serv_addr_recv.sin_zero), 8);
 
-	printf("\n Started Sending\n");
-	fflush(stdout);
-	n = sendto(sockfd, "its sending Back", sizeof("its sending Back"), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
+	if (bind(sockfd2, (struct sockaddr *) &serv_addr_recv, sizeof(struct sockaddr)) < 0) 
+		printf("ERROR on binding");
 
+	while(1)
+	{
+		sleep(2);
+		n = sendto(sockfd, "Are you awake?", sizeof("Are you awake?"), 0, (const struct sockaddr *) &serv_addr_send, sizeof(struct sockaddr_in));
+
+		n = recvfrom(sockfd2, buffer, sizeof(buffer), 0, (struct sockaddr *) &serv_addr_recv, &clilen);
+		printf("received message: %s\n", buffer);
+		fflush(stdout);
+	}
 	pthread_exit(NULL);
 
 }
@@ -138,17 +151,18 @@ int serverUDP()
 
 	clilen = sizeof(struct sockaddr_in);
 
+	int availablePos = 2; //Change value later for 0, is going to be changed with new function
+
 	while (1) {
 		HOST currentHost;
 		
 		n = recvfrom(sockfd2, &newCon, sizeof(newCon), 0, (struct sockaddr *) &cli_addr, &clilen);
-	
-		//printf("Received a datagram: %s\n", buf);
-		//struct pcInfo aaaa = *newCon;
-		printf("Hostname is: %s\n", newCon.hostName);//newCon.hostName);
-		fflush(stdout);
+
+
+		n = sendto(sockfd2, &availablePos, sizeof(availablePos), 0,(struct sockaddr *) &cli_addr, sizeof(struct sockaddr));
+
+		//printf("Hostname is: %s\n", newCon.hostName);//newCon.hostName);
  	    //printf("IP Address is: %s\n" , newCon.ipNumber);
-		//fflush(stdout);
         //printf("Mac Address is: %s\n" , newCon.macAddress);
 		//fflush(stdout);
 		
