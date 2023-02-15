@@ -3,12 +3,13 @@
 
 #define ASLEEP 0
 #define AWAKEN 1
-#define TABLE_SIZE 4
+#define TABLE_SIZE 20
+#define CHAR_MAX 256
 
 typedef struct host_struct {
-    char hostname[256];
-    char macadd[256];
-    char ipadd[256];
+    char hostname[CHAR_MAX];
+    char macadd[CHAR_MAX];
+    char ipadd[CHAR_MAX];
     int status;
     int index;
 } HOST;
@@ -84,6 +85,7 @@ int main() {
 
 
     int index = insertHost(host);
+    printHost(host);
 	printHost(table[index]);
 
     removeHost(0);
