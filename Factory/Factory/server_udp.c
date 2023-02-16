@@ -17,7 +17,7 @@
 #define PORTTHREAD 10000
 #define MAXCONNECTIONS 3
 
-
+int wakeUpFlag = -1;
 
 void *caller()
 {
@@ -98,7 +98,7 @@ void *requestStatus(void* pcDetails)
 	bzero(&(serv_addr_recv.sin_zero), 8);
 
 	if (bind(sockfd2, (struct sockaddr *) &serv_addr_recv, sizeof(struct sockaddr)) < 0) 
-		printf("ERROR on bindingggggggggggggggggggggg");
+		printf("ERROR on binding");
 
 	struct timeval tv;	
 	tv.tv_sec = 1;
@@ -107,12 +107,29 @@ void *requestStatus(void* pcDetails)
 	int control = 0;
 	int whileLoop = 1;
 
+	char wolPacket[102];
+	int c = 0;
+	for (c = 0; c < 6; c++) {
+		wolPacket[c] = 0xFF;
+	}
+
+	for (c = 6; c < 102; c += 6) {
+		char* wolPtr = &(wolPacket[c]);
+		sscanf(clientInfo.macAddress, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &wolPtr[c+0], &wolPtr[c+1], &wolPtr[c+2], &wolPtr[c+3], &wolPtr[c+4], &wolPtr[c+5]);
+	}
+
+
 	if (setsockopt(sockfd2, SOL_SOCKET, SO_RCVTIMEO,&tv,sizeof(tv)) < 0) {
 	    perror("Error");
 	}	
-
 	while(whileLoop)
 	{
+		if (wakeUpFlag == clientInfo.pos) {
+			
+			
+			n = sendto(sockfd, wolPacket, 102, 0, (const struct sockaddr *) &serv_addr_send, sizeof(struct sockaddr_in));
+			wakeUpFlag = -1;
+		}
 		sleep(2);
 		n = sendto(sockfd, "Are you awake?", sizeof("Are you awake?"), 0, (const struct sockaddr *) &serv_addr_send, sizeof(struct sockaddr_in));
 
@@ -154,6 +171,37 @@ void *requestStatus(void* pcDetails)
 
 }
 
+void *wakeUpThread() 
+{
+	char input[256];
+	char delim[] = " ";
+	char *ptr;
+	int len;
+	HOST host;
+	printf("HUM\n");
+	while (1) {
+
+		bzero(input, 256);
+		fgets(input, 256, stdin);
+		char *ptr = strtok(input, delim);
+		
+		if(!(strcmp(ptr, "WAKEUP"))) {
+			ptr = strtok(NULL, delim);
+			len = strlen(ptr);
+			ptr[len -1] = '\0'; //Remove trailing newline
+			printf("'%s'\n", ptr);
+			printf("HUMM\n");
+  			host = findHostByName(ptr);
+			if (host.index > -1) {
+				printf("Achou!\n");
+				printf("%s\n", host.macadd);
+
+			} else {
+				printf("Hostname not found!\n");
+			}
+		}
+	}
+}
 
 int serverUDP()
 {
@@ -166,6 +214,7 @@ int serverUDP()
 	void *ret;
 	pthread_create( &tid, NULL ,  caller , NULL);
 
+	pthread_create( &tid, NULL ,  wakeUpThread , NULL);
 
 	
 
@@ -217,10 +266,7 @@ int serverUDP()
 
 			fflush(stdout);
 		}
-else
-printf("nothing is supposed to happen");
-	}	
-	
+	}
 
 
 	destroy_mutex();
