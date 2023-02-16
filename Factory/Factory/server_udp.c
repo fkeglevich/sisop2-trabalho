@@ -11,6 +11,9 @@
 //#include "hosts.c"
 #include "client_udp.c"
 #include "table.c"
+#include "semaphore.h"
+
+sem_t semaphore;
 
 #define PORT 40000
 #define PORTBROADCAST 5000
@@ -61,6 +64,8 @@ void *requestStatus(void* pcDetails)
 	strcpy(clientInfo.macAddress, clientInfoAux->macAddress);
 	strcpy(clientInfo.ipNumber, clientInfoAux->ipNumber);
 	clientInfo.pos = clientInfoAux->pos;
+
+	sem_post(&semaphore);
 
     int sockfd, sockfd2, n;
 	unsigned int length;
@@ -178,7 +183,6 @@ void *wakeUpThread()
 	char *ptr;
 	int len;
 	HOST host;
-	printf("HUM\n");
 	while (1) {
 
 		bzero(input, 256);
@@ -189,12 +193,9 @@ void *wakeUpThread()
 			ptr = strtok(NULL, delim);
 			len = strlen(ptr);
 			ptr[len -1] = '\0'; //Remove trailing newline
-			printf("'%s'\n", ptr);
-			printf("HUMM\n");
   			host = findHostByName(ptr);
 			if (host.index > -1) {
-				printf("Achou!\n");
-				printf("%s\n", host.macadd);
+				wakeUpFlag = host.index;
 
 			} else {
 				printf("Hostname not found!\n");
@@ -207,6 +208,7 @@ int serverUDP()
 {
 	
     init_table();
+	sem_init(&semaphore, 0, 1);
 
 	struct pcInfo newCon;
 	pthread_t tid, tidWait;
@@ -260,16 +262,19 @@ int serverUDP()
 
 		if(availablePos >= 0)
 		{
+			sem_wait(&semaphore);
 			pthread_create( &tidWait, NULL ,  requestStatus , (void *)&newCon);
 			
 			printTable();
 
 			fflush(stdout);
 		}
+		
 	}
 
 
 	destroy_mutex();
+	sem_destroy(&semaphore);
 
 	return 0;
 }
