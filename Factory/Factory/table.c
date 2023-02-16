@@ -148,3 +148,18 @@ void sleepHost(int id)
     // MUTEX CODE END
 }
 
+HOST findHostByName(const char* hostname) {
+    int i;
+    HOST result = create_host("", "", "", AWAKEN); // default result if not found
+    // MUTEX CODE BEGIN
+    pthread_mutex_lock(&lock);
+    for (i=0; i<TABLE_SIZE; i++) {
+        if(!(strcmp(table[i].hostname, hostname))) {
+            result = table[i];
+            break;
+        }
+    }
+    // MUTEX CODE END
+    pthread_mutex_unlock(&lock);
+    return result;
+}
