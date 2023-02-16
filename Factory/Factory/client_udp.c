@@ -17,6 +17,8 @@
 #define PORTBROADCAST 5000
 #define PORTTHREAD 10000
 
+int VariavelDeControle = 1;
+
 struct pcInfo
 {
 	char hostName[256];
@@ -91,7 +93,7 @@ char* getHost()
 }
 
 // Function that get the hostname and the ip address and (in the future) the mac address and returns them in a struct for it to be sent to the server
-struct pcInfo printIPandName()
+struct pcInfo getIPandName()
 {
 
     struct pcInfo newCon;
@@ -99,7 +101,7 @@ struct pcInfo printIPandName()
     strcpy(newCon.hostName, getHost());
     strcpy(newCon.ipNumber, getipNumber());
     strcpy(newCon.macAddress, getMac());
-	newCon.pos = 0;
+	newCon.pos = -1;
     return newCon;
 }
 
@@ -108,13 +110,6 @@ struct pcInfo printIPandName()
 void *sendStatus(void* pcDetails)
 {
 	struct pcInfo *clientInfo = pcDetails;
-
-	//printf(clientInfo->hostName);
-	//printf(clientInfo->ipNumber);
-	//printf(clientInfo->macAddress);
-	//printf(" position: %i\n",clientInfo->pos);
-	//fflush(stdout);
-
 
 
 	int currentPort = PORTTHREAD + (clientInfo->pos * 2000);
@@ -155,13 +150,27 @@ void *sendStatus(void* pcDetails)
 	
 	clilen3 = sizeof(struct sockaddr_in);
 	
-	while(1)
+	int aux = 0;
+
+	while(VariavelDeControle)
 	{
+		
     	n3 = recvfrom(sockfd3, buffer, sizeof(buffer), 0, (struct sockaddr *) &cli_addr3, &clilen3);
 		printf("Received a datagram: %s\n", buffer);
-		n3 = sendto(sockfd, "I'm awake", sizeof("I'm awake"), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
+	//	if(aux < 5 || aux > 15)
+			n3 = sendto(sockfd, "I'm awake", sizeof("I'm awake"), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
+		aux++;
 	
 	}
+
+	printf("\nEnding conection.");
+	n3 = sendto(sockfd, "End", sizeof("End"), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
+	printf(".");
+	n3 = sendto(sockfd, "End", sizeof("End"), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
+	printf(".");	
+	n3 = sendto(sockfd, "End", sizeof("End"), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
+	
+
 	pthread_exit(NULL);
 
 }
@@ -175,6 +184,7 @@ int clientUDP()
 	socklen_t clilen;
 	struct sockaddr_in serv_addr, cli_addr;
 	char managerIP[256];
+	char *ret;
 		
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) 
 		printf("ERROR opening socket");
@@ -201,7 +211,7 @@ int clientUDP()
     ////////////////////////////////end of first receive, start of first send////////////////////////////////
 
 
-   	struct pcInfo newCon = printIPandName();
+   	struct pcInfo newCon = getIPandName();
 
 
     int sockfd2, n2;
@@ -236,12 +246,7 @@ int clientUDP()
 
 	newCon.pos = availablePos;
 
-	//int threadPort = PORTTHREAD + (1000 * availablePos);
-
-	printf("\n new port: %i", newCon.pos);
-
 	close(sockfd2);
-
 
 	///////////////////////////////// end of first send, start of second receive////////////////////////////////////
 
@@ -262,7 +267,10 @@ int clientUDP()
 			fgets(input, 256, stdin);
 		}
 
-		printf("exiting process...\n");
+		VariavelDeControle = 0;
 	}
+
+	pthread_join(tid, (void **)&ret);
+
 	return 0;
 }

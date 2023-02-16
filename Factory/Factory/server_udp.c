@@ -54,7 +54,13 @@ void *caller()
 
 void *requestStatus(void* pcDetails)
 {
-	struct pcInfo *clientInfo = pcDetails;
+	struct pcInfo *clientInfoAux = pcDetails;
+
+	struct pcInfo clientInfo;
+	strcpy(clientInfo.hostName, clientInfoAux->hostName);
+	strcpy(clientInfo.macAddress, clientInfoAux->macAddress);
+	strcpy(clientInfo.ipNumber, clientInfoAux->ipNumber);
+	clientInfo.pos = clientInfoAux->pos;
 
     int sockfd, sockfd2, n;
 	unsigned int length;
@@ -64,13 +70,13 @@ void *requestStatus(void* pcDetails)
 
 	char buffer[256];
 
-	int currentPort = PORTTHREAD + (clientInfo->pos * 2000);
+	int currentPort = PORTTHREAD + (clientInfo.pos * 2000);
 
 	
 	printf("\n%i\n", currentPort);
 	fflush(stdout);
 
-	server = gethostbyname(clientInfo->ipNumber);
+	server = gethostbyname(clientInfo.ipNumber);
 	
 
 	if (server == NULL) {
@@ -106,12 +112,13 @@ void *requestStatus(void* pcDetails)
 	tv.tv_usec = 0;
 
 	int control = 0;
+	int whileLoop = 1;
 
 	if (setsockopt(sockfd2, SOL_SOCKET, SO_RCVTIMEO,&tv,sizeof(tv)) < 0) {
 	    perror("Error");
 	}	
 
-	while(1)
+	while(whileLoop)
 	{
 		sleep(2);
 		n = sendto(sockfd, "Are you awake?", sizeof("Are you awake?"), 0, (const struct sockaddr *) &serv_addr_send, sizeof(struct sockaddr_in));
@@ -120,24 +127,36 @@ void *requestStatus(void* pcDetails)
 		n = recvfrom(sockfd2, buffer, sizeof(buffer), 0, (struct sockaddr *) &serv_addr_recv, &clilen);
 		if(!(strcmp(buffer, "I'm awake")))
 		{
-			//if(control > 0)
-				////////////////////////////////TODO: INSERT FUNCTION TO CHANGE STATUS TO AWAKE
+			if(control > 0)
+			{
+				wakeUpHost(clientInfo.pos);
+				printTable();
+			}
 			control = 0;
 			printf("received message: %s\n", buffer);
 		}
-		else
+		else if(strcmp(buffer, "End"))
 		{
 			control++;
 			if(control > 2)
 			{
-				printf("sleeping");
-				//////////////////////////////////TODO:insert function to change status to sleep
+				if(control == 3)
+				{
+					sleepHost(clientInfo.pos);
+					printTable();
+				}
 			}
-		}
+		} else
+			whileLoop = 0;
+
 		fflush(stdout);
 	}
 
+	removeHost(clientInfo.pos);
 	printf("\nended connection\n");
+	printTable();
+	close(sockfd2);
+	close(sockfd);
 	pthread_exit(NULL);
 
 }
@@ -153,7 +172,7 @@ int serverUDP()
 	pthread_t tid, tidWait;//, manut[MAXCONNECTIONS];
 
 	void *ret;
-	pthread_create( &tid, NULL ,  caller , NULL);//pthread_create( &tid, NULL ,  requestStatus , (void *)newCon);
+	pthread_create( &tid, NULL ,  caller , NULL);
 
 
 	
@@ -180,13 +199,11 @@ int serverUDP()
 
 	clilen = sizeof(struct sockaddr_in);
 
-	int availablePos = 2; //Change value later for 0, is going to be changed with new function
+	int availablePos = -1;// = 2; //Change value later for 0, is going to be changed with new function
 
 
 	while (1) {
 		HOST currentHost;
-		
-		//bzero(&(newCon), sizeof(struct pcInfo));
 
 		n = recvfrom(sockfd2, &newCon, sizeof(newCon), 0, (struct sockaddr *) &cli_addr, &clilen);
 
@@ -205,7 +222,7 @@ int serverUDP()
 			pthread_create( &tidWait, NULL ,  requestStatus , (void *)&newCon);
 			
 			printTable();
-		////////////////////////////////////////////////////////////////////TODO: INSERT FUNCTION TO PRINT TABLE
+
 			fflush(stdout);
 		}
 	}	

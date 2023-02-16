@@ -117,26 +117,32 @@ void printHost(HOST host)
 
 void printTable() {
     int i;
+    // MUTEX CODE BEGIN
+    pthread_mutex_lock(&lock);
     for (i=0; i<TABLE_SIZE; i++) {
         if(table[i].index > -1)
             printHost(table[i]);
     }
+    printf("\n\n\n");
+    pthread_mutex_unlock(&lock);
+    // MUTEX CODE END
 }
 
-// int main() {
+void wakeUpHost(int id)
+{
+    // MUTEX CODE BEGIN
+    pthread_mutex_lock(&lock);
+    table[id].status = AWAKEN;
+    pthread_mutex_unlock(&lock);
+    // MUTEX CODE END
+}
 
-//     init_table();
-//     HOST host = create_host("aaaaasda", "mac", "ipeh", 1);
-//     // printHost(host);
+void sleepHost(int id)
+{
+    // MUTEX CODE BEGIN
+    pthread_mutex_lock(&lock);
+    table[id].status = ASLEEP;
+    pthread_mutex_unlock(&lock);
+    // MUTEX CODE END
+}
 
-
-//     int index = insertHost(host);
-//     printHost(host);
-// 	printHost(table[index]);
-
-//     removeHost(0);
-
-//     printHost(table[index]);
-
-//     return 0;
-// }
