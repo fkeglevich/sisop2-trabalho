@@ -256,7 +256,7 @@ int clientUDP()
 
 		// while que recebe inputs do usuário até que ele digite exit
 		char input[256];
-		while(strcmp(input, "exit\n"))
+		while(strcmp(input, "EXIT\n"))
 		{
 			bzero(input, 256);
 			fgets(input, 256, stdin);
