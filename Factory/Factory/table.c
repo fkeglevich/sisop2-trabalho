@@ -91,6 +91,8 @@ int insertHost(HOST host)
 
     int id = get_next_free_id();
     if (id == -1) {
+
+    	pthread_mutex_unlock(&lock);
         return -1; //No free ID, table is FULL!
     }
     table[id] = host;

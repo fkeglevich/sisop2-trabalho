@@ -115,7 +115,6 @@ void *sendStatus(void* pcDetails)
 	int currentPort = PORTTHREAD + (clientInfo->pos * 2000);
 
 
-
     int k = 0;
 	int sockfd3, sockfd, n3;
 	socklen_t clilen3;
@@ -149,16 +148,15 @@ void *sendStatus(void* pcDetails)
 	
 	clilen3 = sizeof(struct sockaddr_in);
 	
-	int aux = 0;
+
 
 	while(VariavelDeControle)
 	{
 		
     	n3 = recvfrom(sockfd3, buffer, sizeof(buffer), 0, (struct sockaddr *) &cli_addr3, &clilen3);
 		//printf("Received a datagram: %s\n", buffer);
-		//if(aux < 5 || aux > 15)
+
 			n3 = sendto(sockfd, "I'm awake", sizeof("I'm awake"), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
-		aux++;
 	
 	}
 
@@ -203,9 +201,7 @@ int clientUDP()
 
 
  
-   
-   	// Now we need to get the simple message to transmit back to manager all pcInformation
-   
+
 	close(sockfd);
     ////////////////////////////////end of first receive, start of first send////////////////////////////////
 
@@ -233,7 +229,6 @@ int clientUDP()
 	serv_addr2.sin_port = htons(PORT);	
 	serv_addr2.sin_addr = *((struct in_addr *)server->h_addr);
 	
-	//serv_addr.sin_addr.s_addr = inet_addr("172.26.209.226");
 	bzero(&(serv_addr2.sin_zero), 8);
 
 	int availablePos;
@@ -244,6 +239,7 @@ int clientUDP()
 	n = recvfrom(sockfd2, &availablePos, sizeof(availablePos), 0, (struct sockaddr *) &cli_addr, &clilen);
 
 	newCon.pos = availablePos;
+	strcpy(newCon.ipNumber, managerIP); //gambiarra aqui
 
 	close(sockfd2);
 

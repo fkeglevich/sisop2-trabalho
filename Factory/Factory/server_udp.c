@@ -72,9 +72,7 @@ void *requestStatus(void* pcDetails)
 
 	int currentPort = PORTTHREAD + (clientInfo.pos * 2000);
 
-
 	server = gethostbyname(clientInfo.ipNumber);
-	
 
 	if (server == NULL) {
         fprintf(stderr,"ERROR, no such host\n");
@@ -95,12 +93,12 @@ void *requestStatus(void* pcDetails)
 
 	serv_addr_recv.sin_family = AF_INET;
 	serv_addr_recv.sin_port = htons(currentPort + 1000);	
-	serv_addr_recv.sin_addr = *((struct in_addr *)server->h_addr);
+	serv_addr_recv.sin_addr.s_addr = INADDR_ANY;// = *((struct in_addr *)server->h_addr);
 	
 	bzero(&(serv_addr_recv.sin_zero), 8);
 
 	if (bind(sockfd2, (struct sockaddr *) &serv_addr_recv, sizeof(struct sockaddr)) < 0) 
-		printf("ERROR on binding");
+		printf("ERROR on bindingggggggggggggggggggggg");
 
 	struct timeval tv;	
 	tv.tv_sec = 1;
@@ -161,10 +159,9 @@ int serverUDP()
 {
 	
     init_table();
-	//creating();
 
 	struct pcInfo newCon;
-	pthread_t tid, tidWait;//, manut[MAXCONNECTIONS];
+	pthread_t tid, tidWait;
 
 	void *ret;
 	pthread_create( &tid, NULL ,  caller , NULL);
@@ -194,7 +191,7 @@ int serverUDP()
 
 	clilen = sizeof(struct sockaddr_in);
 
-	int availablePos = -1;// = 2; //Change value later for 0, is going to be changed with new function
+	int availablePos = -1;
 
 
 	while (1) {
@@ -220,6 +217,8 @@ int serverUDP()
 
 			fflush(stdout);
 		}
+else
+printf("nothing is supposed to happen");
 	}	
 	
 
