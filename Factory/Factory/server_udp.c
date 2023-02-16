@@ -72,9 +72,6 @@ void *requestStatus(void* pcDetails)
 
 	int currentPort = PORTTHREAD + (clientInfo.pos * 2000);
 
-	
-	printf("\n%i\n", currentPort);
-	fflush(stdout);
 
 	server = gethostbyname(clientInfo.ipNumber);
 	
@@ -94,14 +91,12 @@ void *requestStatus(void* pcDetails)
 	serv_addr_send.sin_port = htons(currentPort);	
 	serv_addr_send.sin_addr = *((struct in_addr *)server->h_addr);
 	
-	//serv_addr.sin_addr.s_addr = inet_addr("172.26.209.226");
 	bzero(&(serv_addr_send.sin_zero), 8);
 
 	serv_addr_recv.sin_family = AF_INET;
 	serv_addr_recv.sin_port = htons(currentPort + 1000);	
 	serv_addr_recv.sin_addr = *((struct in_addr *)server->h_addr);
 	
-	//serv_addr.sin_addr.s_addr = inet_addr("172.26.209.226");
 	bzero(&(serv_addr_recv.sin_zero), 8);
 
 	if (bind(sockfd2, (struct sockaddr *) &serv_addr_recv, sizeof(struct sockaddr)) < 0) 
@@ -133,7 +128,7 @@ void *requestStatus(void* pcDetails)
 				printTable();
 			}
 			control = 0;
-			printf("received message: %s\n", buffer);
+			//printf("received message: %s\n", buffer);
 		}
 		else if(strcmp(buffer, "End"))
 		{

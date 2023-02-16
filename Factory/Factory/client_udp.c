@@ -114,8 +114,7 @@ void *sendStatus(void* pcDetails)
 
 	int currentPort = PORTTHREAD + (clientInfo->pos * 2000);
 
-	printf("\n%i\n", currentPort);
-	fflush(stdout);
+
 
     int k = 0;
 	int sockfd3, sockfd, n3;
@@ -156,8 +155,8 @@ void *sendStatus(void* pcDetails)
 	{
 		
     	n3 = recvfrom(sockfd3, buffer, sizeof(buffer), 0, (struct sockaddr *) &cli_addr3, &clilen3);
-		printf("Received a datagram: %s\n", buffer);
-	//	if(aux < 5 || aux > 15)
+		//printf("Received a datagram: %s\n", buffer);
+		//if(aux < 5 || aux > 15)
 			n3 = sendto(sockfd, "I'm awake", sizeof("I'm awake"), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
 		aux++;
 	
@@ -202,7 +201,7 @@ int clientUDP()
     int f = 1;
     n = recvfrom(sockfd, managerIP, sizeof(managerIP), 0, (struct sockaddr *) &cli_addr, &clilen);
 
-	printf("Received a datagram: %s\n", managerIP);
+
  
    
    	// Now we need to get the simple message to transmit back to manager all pcInformation
