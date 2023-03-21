@@ -19,13 +19,15 @@
 
 int VariavelDeControle = 1;
 
-struct pcInfo
+typedef struct pcInfo_struct
 {
 	char hostName[256];
 	char ipNumber[256];
     char macAddress[256];
 	int pos;
-} ;
+	int status;
+	int isServer;
+} pcInfo;
 
 void checkHostName(int hostname)
 {
@@ -94,10 +96,10 @@ char* getHost()
 }
 
 // Function that get the hostname and the ip address and (in the future) the mac address and returns them in a struct for it to be sent to the server
-struct pcInfo getIPandName()
+pcInfo getIPandName()
 {
 
-    struct pcInfo newCon;
+    pcInfo newCon;
 
     strcpy(newCon.hostName, getHost());
     strcpy(newCon.ipNumber, getipNumber());
@@ -110,7 +112,7 @@ struct pcInfo getIPandName()
 
 void *sendStatus(void* pcDetails)
 {
-	struct pcInfo *clientInfo = pcDetails;
+	pcInfo *clientInfo = pcDetails;
 
 
 	int currentPort = PORTTHREAD + (clientInfo->pos * 2000);
@@ -207,7 +209,7 @@ int clientUDP()
     ////////////////////////////////end of first receive, start of first send////////////////////////////////
 
 
-   	struct pcInfo newCon = getIPandName();
+   	pcInfo newCon = getIPandName();
 
 	printf("new hostname: %s", newCon.hostName);
 fflush(stdout);

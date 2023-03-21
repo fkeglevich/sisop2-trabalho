@@ -78,9 +78,9 @@ void *caller()
 
 void *requestStatus(void* pcDetails)
 {
-	struct pcInfo *clientInfoAux = pcDetails;
+	pcInfo *clientInfoAux = pcDetails;
 
-	struct pcInfo clientInfo;
+	pcInfo clientInfo;
 	strcpy(clientInfo.hostName, clientInfoAux->hostName);
 	strcpy(clientInfo.macAddress, clientInfoAux->macAddress);
 	strcpy(clientInfo.ipNumber, clientInfoAux->ipNumber);
@@ -237,7 +237,7 @@ int serverUDP()
 	sem_init(&semaphore,0,1);
     init_table();
 
-	struct pcInfo newCon;
+	pcInfo newCon;
 	pthread_t tid, tidWait;
 
 	void *ret;
