@@ -29,6 +29,7 @@
 
 int posicao;
 int isElecting;
+int isServer;
 
 typedef struct table_struct
 {
@@ -39,12 +40,119 @@ typedef struct table_struct
 
 fullTable tabelaAtual;
 
+void *electionRoutine()
+{
+    isElecting = 1;
+    //////////////////////////TODO: Implementar 
 
-//rotina servidor
-// se a tabela estiver vazia, inicia uma tabela e se insere nela como servidor
-// se a tabela já existir ele vai estar nela (necessita estar na tabela para concorrer) e seta para true o seu status de servidor
-// inicia rotina de recebimento de novas entradas
-// percorre a tabela iniciando Thread para cada cliente na tabela (mesmo os que estejam dormindo)
+    isElecting = 0;
+	pthread_exit(NULL);
+}
+
+void *receiveNewConnections()
+{
+
+    int isNewConnection = 1;
+
+
+    /////////////////////////////////Socket Initialization//////////////////////////////////////////
+    int sockfd, n;
+	socklen_t clilen;
+	struct sockaddr_in serv_addr, cli_addr;
+	char managerIP[256];
+	char *ret;
+		
+    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) 
+		printf("ERROR opening socket");
+
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_port = htons(PORTBROADCAST);
+	serv_addr.sin_addr.s_addr = INADDR_ANY;
+	bzero(&(serv_addr.sin_zero), 8);    
+	 
+	if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(struct sockaddr)) < 0) 
+		printf("ERROR on binding");
+	
+	clilen = sizeof(struct sockaddr_in);
+
+    //////////////////////////////////////End of Socket Initialization///////////////////////////////
+	
+    
+    while(isServer)
+    {
+        pcInfo thisPC;
+        n = recvfrom(sockfd, &thisPC, sizeof(thisPC), 0, (struct sockaddr *) &cli_addr, &clilen);
+        
+        //percorre a tabela e verifica se a informação lida já está nela
+        for(int i = 0; i < MAXCONNECTIONS; i++)
+        {
+            if(!strcmp(thisPC.ipNumber, tabelaAtual.tabela[i].ipNumber))
+                isNewConnection = 0;
+        }
+
+        if(isNewConnection)
+        {
+            /////////////TODO:insere na tabela as informações
+        }
+
+        isNewConnection = 1;
+    }
+
+ 
+
+	close(sockfd);
+
+
+
+	pthread_exit(NULL);
+}
+
+void *serverRotine()
+{
+    if(isServer)
+    {
+        for(int i = 0; i < MAXCONNECTIONS; i++)
+        {
+            ////////////TODO: criar uma thread de checagem de status para cada pc na tabela
+        }
+    }
+
+    ////////////////TODO: criar thread de recebimento de novas conexões
+
+    //////////////////////////////////Starting socket initialization//////////////////////////////////////
+
+    /////////////////////////////TODO: mudar de broadcast para multicast(envia uma mensagem para cada endereco)
+    int sockfd, n;
+	unsigned int length;
+	struct sockaddr_in serv_addr, from;
+	struct hostent *server;
+
+
+	if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
+		printf("ERROR opening socket");
+
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_port = htons(PORTTABLEATUALIZATION);
+	serv_addr.sin_addr.s_addr = inet_addr("255.255.255.255");
+	bzero(&(serv_addr.sin_zero), 8);
+
+	int enabled = 1;
+	setsockopt(sockfd,SOL_SOCKET,SO_BROADCAST,&enabled, sizeof(enabled));
+
+    ///////////////////////////////////Ending socket Initialization////////////////////////////////////////
+
+
+    while(isServer)
+    {
+        n = sendto(sockfd, &tabelaAtual, sizeof(tabelaAtual), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
+		sleep(2);
+    }
+
+	pthread_exit(NULL);
+
+}
+
+
 
 void *sendCurrentStatus()
 {
@@ -171,7 +279,7 @@ void *monitoring()
         {
             //verifica se recebeu informacao válida
             n = recvfrom(sockfd, &tabelaControle, sizeof(tabelaControle), 0, (struct sockaddr *) &serv_addr, &clilen);
-            if(tabelaControle.clock >= 0)
+            if(tabelaControle.clock >= 0) /////////////////TODO: verificar se esse método consegue verificar se pegou uma tabela
             {
                 waitingTable = 0;
             }
@@ -223,6 +331,8 @@ void *monitoring()
             
             if(ipServer != "")
             {
+                //Send this pc data for server to be included in table
+
                 ///////////////////////////////initializing socket///////////////////////////////////////
                 int sockfdSendInfo, n2;
 	            unsigned int length;
@@ -282,6 +392,7 @@ int main(int argc, char *argv[])
 {
     posicao = -1;
     isElecting = 0;
+    isServer = 0;
 
 	pcInfo newCon;
 	pthread_t tid;
