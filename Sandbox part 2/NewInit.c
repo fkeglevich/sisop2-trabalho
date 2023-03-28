@@ -49,6 +49,77 @@ void *electionRoutine()
 	pthread_exit(NULL);
 }
 
+
+
+void *checkCurrentStatus(void *pos)
+{
+    int *checkPosicao = pos;
+	int posAux = *checkPosicao;
+int controle;
+	char mensagem[256];
+	printf("posicao recebida %d", posAux);
+
+
+    //time struct to define timeout for receive message
+	struct timeval tv;	
+	tv.tv_sec = 2;
+	tv.tv_usec = 0;
+
+    ///////////////////////////////////////////socket initialization///////////////////////////////////////////////
+    int sockfd, n;
+    socklen_t clilen;
+    struct sockaddr_in serv_addr;
+    char status[256];
+    char *ret;
+    	
+    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) 
+    	printf("ERROR opening socket");
+    
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(PORTSTATUSBASE + posAux);
+    serv_addr.sin_addr.s_addr = INADDR_ANY;
+    bzero(&(serv_addr.sin_zero), 8);    
+     
+    if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(struct sockaddr)) < 0) 
+    	printf("ERROR on binding");
+       
+    clilen = sizeof(struct sockaddr_in);
+    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO,&tv,sizeof(tv)) < 0) 
+	    perror("Error");	
+    //////////////////////////////////////////socket initialization end///////////////////////////////////////////
+         
+
+	controle = CONTROLTIMES;
+	while(isServer)
+	{
+		
+            n = recvfrom(sockfd, &mensagem, sizeof(mensagem), 0, (struct sockaddr *) &serv_addr, &clilen);
+            if(!strcmp(mensagem,"Awake") 
+            {		
+		if(controle <= 0)
+		{
+			//TODO:Atualiza status na tabela
+		}
+                controle = CONTROLTIMES;
+            }
+		else
+		{
+			controle--;
+		}
+
+		if(controle <= 0)
+		{
+			//TODO:Atualiza status na tabela
+		}
+	}
+    //////////////////////////TODO: Terminar 
+	fflush(stdout);
+    isElecting = 0;
+	pthread_exit(NULL);
+}
+
+
+
 void *receiveNewConnections()
 {
 
@@ -109,15 +180,18 @@ void *receiveNewConnections()
 
 void *serverRotine()
 {
+	pthread_t tid[MAXCONNECTIONS];
     if(isServer)
     {
         for(int i = 0; i < MAXCONNECTIONS; i++)
         {
-            ////////////TODO: criar uma thread de checagem de status para cada pc na tabela
+		///////////TODO: verificar se tem alguem nessa posicao da tabela
+		pthread_create( &tid[i], NULL ,  checkCurrentStatus, &i);
+            
         }
     }
 
-    ////////////////TODO: criar thread de recebimento de novas conexões
+    ////////////////criar thread de recebimento de novas conexões (kinda done)
 
     //////////////////////////////////Starting socket initialization//////////////////////////////////////
 
@@ -398,7 +472,9 @@ int main(int argc, char *argv[])
 	pthread_t tid;
 	void *ret;
 
-	pthread_create( &tid, NULL ,  monitoring, NULL);
+	//pthread_create( &tid, NULL ,  monitoring, NULL);
+
+	pthread_create( &tid, NULL ,  checkCurrentStatus, &posicao);
 
     pthread_join(tid, ret);
     printf("waited");
