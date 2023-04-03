@@ -20,9 +20,9 @@
 #define PORTSTATUSBASE 5000
 #define PORTTHREAD 10000
 #define MAXCONNECTIONS 3
-#define PORTTABLEATUALIZATION 6000
+#define PORTSENDIPSERVER 6000
 #define PORTNEWCONNECTION 7000
-#define PORTSENDTABLE 7000
+#define PORTSENDTABLE 8000
 #define CONTROLTIMES 3
 
 
@@ -117,8 +117,11 @@ void *checkCurrentStatus(void *pos)
 
 		if(controle <= 0)
 		{
-			sleepHost(posAux);
-			printTable();
+		    if(tabelaAtual.tabela[posAux].status)
+			{
+                sleepHost(posAux);
+                printTable();
+			}
 		}
 	}
     //////////////////////////TODO: Terminar
@@ -192,6 +195,44 @@ void *receiveNewConnections()
 	pthread_exit(NULL);
 }
 
+
+void *send_table(){
+    int sockfd, n,i;
+	unsigned int length;
+	struct sockaddr_in serv_addr, from;
+	struct hostent *server;
+
+    printf("reached here");
+    fflush(stdout);
+
+    while(1)
+    {
+        for(i=0; i<TABLE_SIZE; i++)
+        {
+
+            if (tabelaAtual.tabela[i].pos > -1)
+            {
+                if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
+                    printf("ERROR opening socket");
+
+                serv_addr.sin_family = AF_INET;
+                serv_addr.sin_port = htons(PORTSENDTABLE);
+                serv_addr.sin_addr.s_addr = inet_addr(tabelaAtual.tabela[i].ipNumber);
+                bzero(&(serv_addr.sin_zero), 8);
+
+                n = sendto(sockfd, &tabelaAtual, sizeof(tabelaAtual), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
+                close(sockfd);
+
+            }
+        }
+        sleep(1);
+    }
+
+}
+
+
+
+
 void *serverRotine()
 {
 
@@ -210,38 +251,9 @@ void *serverRotine()
         }
     }
     //////////////////////////////////Starting socket initialization//////////////////////////////////////
-/*
-    /////////////////////////////TODO: mudar de broadcast para multicast(envia uma mensagem para cada endereco)
-    int sockfd2, n2;
-	unsigned int length2;
-	struct sockaddr_in serv_addr2, from2;
-	struct hostent *server3;
 
-
-	if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
-		printf("ERROR opening socket");
-
-	serv_addr2.sin_family = AF_INET;
-	serv_addr2.sin_port = htons(PORTTABLEATUALIZATION);
-	serv_addr2.sin_addr.s_addr = inet_addr("255.255.255.255");
-	bzero(&(serv_addr2.sin_zero), 8);
-
-	int enabled = 1;
-	setsockopt(sockfd2,SOL_SOCKET,SO_BROADCAST,&enabled, sizeof(enabled));
-
-    ///////////////////////////////////Ending socket Initialization////////////////////////////////////////
-
-
-
-    while(isServer)
-    {
-        printf("is Sending");
-        fflush(stdout);
-        n = sendto(sockfd, &tabelaAtual, sizeof(tabelaAtual), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
-        //n = sendto(sockfd, &table, sizeof(table), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
-
-		sleep(2);
-    }*/
+    pthread_t tid3;
+	pthread_create( &tid3, NULL ,  send_table, NULL);
     //TODO: loopar o envio da tabela
 
 	//Creating thread to receive new connections
@@ -265,7 +277,7 @@ void *serverRotine()
 		printf("ERROR opening socket");
 
 	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_port = htons(PORTTABLEATUALIZATION);
+	serv_addr.sin_port = htons(PORTSENDIPSERVER);
 	serv_addr.sin_addr.s_addr = inet_addr("255.255.255.255");
 	bzero(&(serv_addr.sin_zero), 8);
 
@@ -285,11 +297,87 @@ void *serverRotine()
 		sleep(2);
     }
 
+    printf("ended server function\n");
 	pthread_exit(NULL);
 
 }
 
 
+void *receive_table(){
+    struct timeval tv;
+	tv.tv_sec = 2;
+	tv.tv_usec = 0;
+    int sockfd, n;
+    socklen_t clilen;
+    struct sockaddr_in serv_addr;
+    char managerIP[256];
+    char *ret;
+
+    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
+    	printf("ERROR opening socket");
+
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(PORTSENDTABLE);
+    serv_addr.sin_addr.s_addr = INADDR_ANY;
+    bzero(&(serv_addr.sin_zero), 8);
+
+    if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(struct sockaddr)) < 0)
+    	printf("ERROR on binding");
+
+    clilen = sizeof(struct sockaddr_in);
+    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO,&tv,sizeof(tv)) < 0)
+	    perror("Error");
+
+
+    int controle;
+    controle = CONTROLTIMES;
+    fullTable EmptyTable;
+
+    fullTable tabelaControle;
+
+    while(1)
+    {
+        tabelaControle = EmptyTable;
+        //verifica se recebeu informacao válida
+        n = recvfrom(sockfd, &tabelaControle, sizeof(tabelaControle), 0, (struct sockaddr *) &serv_addr, &clilen);
+        //n = recvfrom(sockfd, &table, sizeof(table), 0, (struct sockaddr *) &serv_addr, &clilen);
+
+
+        if(tabelaControle.clock >= 0)
+        {
+            printf("received table");
+            printf("\nclock recebido: %d\n",tabelaControle.clock);
+            printf("\nclock daqui: %d\n",tabelaAtual.clock);
+            if(tabelaControle.clock > tabelaAtual.clock)
+            {
+                printf("atualizou a tabela");
+                tabelaAtual = tabelaControle;
+                printTable();
+            }
+
+            controle = CONTROLTIMES;
+        }
+        else
+        {
+            printf("couldn't receive table");
+            controle--;
+        }
+
+        if(!isServer)
+        {
+
+        //se não receber inicia uma tabela vazia e se torna server
+            if(controle < 0)
+            {
+                //TODO: inicia algoritmo de eleição
+
+
+                controle = CONTROLTIMES;
+            }
+        }
+    }
+
+}
 
 void *sendCurrentStatus()
 {
@@ -360,6 +448,7 @@ void *monitoring()
     pcInfo thisPC = getIPandName();
 
 
+
     char ipServer[256] = "";
 
     fullTable EmptyTable;
@@ -389,7 +478,7 @@ void *monitoring()
     	printf("ERROR opening socket");
 
     serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(PORTTABLEATUALIZATION);
+    serv_addr.sin_port = htons(PORTSENDIPSERVER);
     serv_addr.sin_addr.s_addr = INADDR_ANY;
     bzero(&(serv_addr.sin_zero), 8);
 
@@ -401,6 +490,8 @@ void *monitoring()
 	    perror("Error");
     //////////////////////////////////////////socket initialization end///////////////////////////////////////////
 
+    pthread_t tid3;
+    pthread_create( &tid3, NULL ,  receive_table, NULL);
 
     while (posicao < 0)
     {
@@ -418,7 +509,6 @@ void *monitoring()
         while(waitingServerIp)
         {
 
-            printf("entered again\n");
             //verifica se recebeu informacao válida
             n = recvfrom(sockfd, &enderecoServer, sizeof(enderecoServer), 0, (struct sockaddr *) &serv_addr, &clilen);
             //n = recvfrom(sockfd, &table, sizeof(table), 0, (struct sockaddr *) &serv_addr, &clilen);
@@ -451,14 +541,19 @@ void *monitoring()
 	            pthread_t tid;
 	            pthread_create( &tid, NULL ,  serverRotine, NULL);
 
-
+                waitingServerIp = 0;
                 controle = CONTROLTIMES;
             }
         }
 
 
+        printf("ended waiting server ip loop");
         for (int i = 0; i < MAXCONNECTIONS; i++)
         {
+            printf(tabelaAtual.tabela[i].ipNumber);
+            printf("&");
+            printf(thisPC.ipNumber);
+            printf("\n\n");
             if(!strcmp(tabelaAtual.tabela[i].ipNumber, thisPC.ipNumber))
             {
                 printf("entrou no if\n\n");
@@ -513,6 +608,7 @@ void *monitoring()
     }
 
 
+
     // Caso estejam: Recebe e armazena posição, envia mensagem de status ao servidor na porta X+posição passando como parâmetro o ip do servidor
 
 	pthread_t tid;
@@ -553,4 +649,13 @@ int main(int argc, char *argv[])
 
     return 0;
 }
+
+
+
+
+
+
+
+
+
 

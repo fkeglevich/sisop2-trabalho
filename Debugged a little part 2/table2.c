@@ -10,7 +10,7 @@ typedef struct pcInfo_struct
 {
 	char hostName[256];
 	char ipNumber[256];
-    	char macAddress[256];
+    char macAddress[256];
 	int pos;
 	int status;
 	int isServer;
@@ -90,7 +90,7 @@ void init_table()
     for (i=0; i<TABLE_SIZE; i++) {
         tabelaAtual.tabela[i] = create_host("", "", "", AWAKEN);
     }
-    tabelaAtual.clock = 0;
+    tabelaAtual.clock = 1;
     pthread_mutex_unlock(&lock);
     // MUTEX CODE END
 }
