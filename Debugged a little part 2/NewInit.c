@@ -24,6 +24,10 @@
 #define PORTNEWCONNECTION 7000
 #define PORTSENDTABLE 8000
 #define CONTROLTIMES 3
+#define NUM_IDS 256
+#define PORT_CALLING_ELECTION 9000
+#define PORT_RECEIVING_ELECTION_RESPONSE 11000
+
 
 
 //put global value referring to table
@@ -51,6 +55,151 @@ void *electionRoutine()
 {
     isElecting = 1;
     //////////////////////////TODO: Implementar
+    char *lastIPPortion;
+    int myID, n, sockfd;
+    struct sockaddr_in serv_addr;
+    int is_running = 0;
+
+    pcInfo thisPC = getIPandName();
+    lastIPPortion = strrchr(thisPC.ipNumber, '.') + 1;
+    myID = atoi(lastIPPortion);
+
+    printf("Node %s, with ID: %d started the election.\n", thisPC.ipNumber, myID);
+    
+    // Broadcast an election message to all higher nodes
+    for (int j = myID + 1; j < NUM_IDS; j++) {
+        unsigned long int ip_int;
+
+        ip_int = inet_addr(thisPC.ipNumber);
+        ip_int = (ip_int & 0x00FFFFFF) | (j << 24);
+
+        if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
+            printf("ERROR opening socket");
+
+        serv_addr.sin_family = AF_INET;
+        serv_addr.sin_port = htons(PORT_CALLING_ELECTION);
+        serv_addr.sin_addr.s_addr = ip_int;
+        bzero(&(serv_addr.sin_zero), 8);
+
+        n = sendto(sockfd, &tabelaAtual, sizeof(tabelaAtual), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
+        close(sockfd);
+    }
+
+
+
+    is_running = 1;
+    while (is_running > 0) {
+
+        int controle;
+        int receivingFlag = 1;
+        char mensagem[256];
+
+        //time struct to define timeout for receive message
+        struct timeval tv;
+        tv.tv_sec = 3;
+        tv.tv_usec = 0;
+
+        ///////////////////////////////////////////socket initialization///////////////////////////////////////////////
+        int sockfd, n;
+        socklen_t clilen;
+        struct sockaddr_in serv_addr;
+        char status[256];
+        char *ret;
+
+        if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
+            printf("ERROR opening socket");
+
+        serv_addr.sin_family = AF_INET;
+        serv_addr.sin_port = htons(PORT_RECEIVING_ELECTION_RESPONSE);
+        serv_addr.sin_addr.s_addr = INADDR_ANY;
+        bzero(&(serv_addr.sin_zero), 8);
+
+        if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(struct sockaddr)) < 0)
+            printf("ERROR on binding");
+
+        clilen = sizeof(struct sockaddr_in);
+        if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO,&tv,sizeof(tv)) < 0)
+            perror("Error");
+        //////////////////////////////////////////socket initialization end///////////////////////////////////////////
+
+        controle = CONTROLTIMES;
+        while(receivingFlag > 0)
+        {
+
+
+            n = recvfrom(sockfd, &mensagem, sizeof(mensagem), 0, (struct sockaddr *) &serv_addr, &clilen);
+            if(!strcmp(mensagem,"Election") )
+            {
+               //Achei o lider
+               receivingFlag = 0;
+               isElecting = 0;
+            }
+            else
+            {
+                controle--;
+            }
+
+            if(controle <= 0)
+            {
+                //sou o  Lider
+                isServer = 1;
+                tabelaAtual.tabela[posicao].isServer = 1;
+                //incrementar clock da tablea
+
+                receivingFlag = 0;
+                isElecting = 0;
+            }
+        }
+        //////////////////////////TODO: Terminar
+        fflush(stdout);
+        isElecting = 0;
+        pthread_exit(NULL);
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+        int i;
+        for (i = myID + 1; i < NUM_IDS; i++) {
+            printf("Node %d waits for a reply from node %d.\n", node_id, nodes[i]);
+
+            // Simulate a delay before receiving a reply
+            for (j = 0; j < 10000000; j++) {}
+
+            // Nota: colocar um IF-else aqui
+            // If no reply is received, declare the higher node dead and start a new election
+            printf("Node %d receives a reply from node %d.\n", node_id, nodes[i]);
+            break;
+            
+        }
+        if (i == NUM_IDS) {
+            // If all higher nodes have replied, declare this node as the coordinator
+            coordinator = node_id;
+            printf("Node %d is the new coordinator.\n", coordinator);
+            is_running = 0;
+        } else {
+            // If a higher node replied, become a follower and wait for the new coordinator to be announced
+            node_id = nodes[i];
+            printf("Node %d becomes a follower and waits for the new coordinator.\n", node_id);
+        }
+    }
+
 
     isElecting = 0;
 	pthread_exit(NULL);
