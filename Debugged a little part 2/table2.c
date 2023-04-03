@@ -109,7 +109,8 @@ int insertHost(pcInfo host)
 
     tabelaAtual.tabela[id] = host;
     tabelaAtual.tabela[id].pos = id;
-
+    tabelaAtual.tabela[id].status = AWAKEN;
+    tabelaAtual.clock++;
     pthread_mutex_unlock(&lock);
     // MUTEX CODE END
     return id;
@@ -120,6 +121,7 @@ void removeHost(int id)
     // MUTEX CODE BEGIN
     pthread_mutex_lock(&lock);
     tabelaAtual.tabela[id] = create_host("", "", "", AWAKEN);
+    tabelaAtual.clock++;
     pthread_mutex_unlock(&lock);
     // MUTEX CODE END
 }
@@ -149,6 +151,7 @@ void wakeUpHost(int id)
     // MUTEX CODE BEGIN
     pthread_mutex_lock(&lock);
     tabelaAtual.tabela[id].status = AWAKEN;
+    tabelaAtual.clock++;
     pthread_mutex_unlock(&lock);
     // MUTEX CODE END
 }
@@ -158,6 +161,7 @@ void sleepHost(int id)
     // MUTEX CODE BEGIN
     pthread_mutex_lock(&lock);
     tabelaAtual.tabela[id].status = ASLEEP;
+    tabelaAtual.clock++;
     pthread_mutex_unlock(&lock);
     // MUTEX CODE END
 }

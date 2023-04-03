@@ -22,6 +22,7 @@
 #define MAXCONNECTIONS 3
 #define PORTTABLEATUALIZATION 6000
 #define PORTNEWCONNECTION 7000
+#define PORTSENDTABLE 7000
 #define CONTROLTIMES 3
 
 
@@ -59,14 +60,15 @@ void *checkCurrentStatus(void *pos)
 {
     int *checkPosicao = pos;
 	int posAux = *checkPosicao;
+
+	//TODO:colocar semaforo aqui//////////////////////////////////////////////////////////////////////////////////////////
     int controle;
 	char mensagem[256];
-	printf("posicao recebida %d", posAux);
 
 
     //time struct to define timeout for receive message
 	struct timeval tv;
-	tv.tv_sec = 2;
+	tv.tv_sec = 3;
 	tv.tv_usec = 0;
 
     ///////////////////////////////////////////socket initialization///////////////////////////////////////////////
@@ -97,12 +99,14 @@ void *checkCurrentStatus(void *pos)
 	while(isServer)
 	{
 
+
         n = recvfrom(sockfd, &mensagem, sizeof(mensagem), 0, (struct sockaddr *) &serv_addr, &clilen);
         if(!strcmp(mensagem,"Awake") )
         {
 		    if(controle <= 0)
 		    {
-			    //TODO:Atualiza status na tabela
+                wakeUpHost(posAux);
+                printTable();
 		    }
             controle = CONTROLTIMES;
         }
@@ -113,7 +117,8 @@ void *checkCurrentStatus(void *pos)
 
 		if(controle <= 0)
 		{
-			//TODO:Atualiza status na tabela
+			sleepHost(posAux);
+			printTable();
 		}
 	}
     //////////////////////////TODO: Terminar
@@ -167,8 +172,10 @@ void *receiveNewConnections()
 
         if(isNewConnection)
         {
-		insertHost(thisPC);
-		printTable();
+            thisPC.pos = insertHost(thisPC);
+            printTable();
+            pthread_t tid;
+            pthread_create( &tid, NULL ,  checkCurrentStatus, &thisPC.pos);
                 //starta thread de monitoramento
                 /////////////TODO:insere na tabela as informações
         }
@@ -199,10 +206,43 @@ void *serverRotine()
 
         //commented for debug purposes
         //pthread_create( &tid[i], NULL ,  checkCurrentStatus, &i);
-
+        //TODO: Colocar semaforo aqui
         }
     }
+    //////////////////////////////////Starting socket initialization//////////////////////////////////////
+/*
+    /////////////////////////////TODO: mudar de broadcast para multicast(envia uma mensagem para cada endereco)
+    int sockfd2, n2;
+	unsigned int length2;
+	struct sockaddr_in serv_addr2, from2;
+	struct hostent *server3;
 
+
+	if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
+		printf("ERROR opening socket");
+
+	serv_addr2.sin_family = AF_INET;
+	serv_addr2.sin_port = htons(PORTTABLEATUALIZATION);
+	serv_addr2.sin_addr.s_addr = inet_addr("255.255.255.255");
+	bzero(&(serv_addr2.sin_zero), 8);
+
+	int enabled = 1;
+	setsockopt(sockfd2,SOL_SOCKET,SO_BROADCAST,&enabled, sizeof(enabled));
+
+    ///////////////////////////////////Ending socket Initialization////////////////////////////////////////
+
+
+
+    while(isServer)
+    {
+        printf("is Sending");
+        fflush(stdout);
+        n = sendto(sockfd, &tabelaAtual, sizeof(tabelaAtual), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
+        //n = sendto(sockfd, &table, sizeof(table), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
+
+		sleep(2);
+    }*/
+    //TODO: loopar o envio da tabela
 
 	//Creating thread to receive new connections
 
@@ -234,12 +274,12 @@ void *serverRotine()
 
     ///////////////////////////////////Ending socket Initialization////////////////////////////////////////
 
-
+    pcInfo thisPC = getIPandName();
     while(isServer)
     {
         printf("is Sending");
         fflush(stdout);
-        n = sendto(sockfd, &tabelaAtual, sizeof(tabelaAtual), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
+        n = sendto(sockfd, &thisPC.ipNumber, sizeof(thisPC.ipNumber), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
         //n = sendto(sockfd, &table, sizeof(table), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
 
 		sleep(2);
@@ -320,14 +360,13 @@ void *monitoring()
     pcInfo thisPC = getIPandName();
 
 
-            	printf("\npcinfo1 info:%s\n", thisPC.ipNumber);
     char ipServer[256] = "";
 
     fullTable EmptyTable;
     EmptyTable.clock = -1;
 
     fullTable tabelaControle;
-    int waitingTable;
+    int waitingServerIp;
     int controle;
 
     //time struct to define timeout for receive message
@@ -335,7 +374,9 @@ void *monitoring()
 	tv.tv_sec = 2;
 	tv.tv_usec = 0;
 
-            	printf("\npcinfo1 info:%s\n", thisPC.ipNumber);
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////TODO: começa rotina de recebimento de tabela
+
 
     ///////////////////////////////////////////socket initialization///////////////////////////////////////////////
     int sockfd, n;
@@ -366,26 +407,26 @@ void *monitoring()
 
         //////////////TODO: verificar esse controle de tabela para ocorrer normalmente, não apenas para inicializar a posição talvez fazer um while true e um if depois para a posição////////////////////
         tabelaControle = EmptyTable;
-        waitingTable = 1;
+        waitingServerIp = 1;
         controle = CONTROLTIMES;
+        char enderecoServer[256]  = "";
 
 
 
-            	printf("\npcinfo1 info:%s\n", thisPC.ipNumber);
 
         //receber mensagem do servidor com a tabela
-        while(waitingTable)
+        while(waitingServerIp)
         {
 
             printf("entered again\n");
             //verifica se recebeu informacao válida
-            n = recvfrom(sockfd, &tabelaControle, sizeof(tabelaControle), 0, (struct sockaddr *) &serv_addr, &clilen);
+            n = recvfrom(sockfd, &enderecoServer, sizeof(enderecoServer), 0, (struct sockaddr *) &serv_addr, &clilen);
             //n = recvfrom(sockfd, &table, sizeof(table), 0, (struct sockaddr *) &serv_addr, &clilen);
 
 
-            if(tabelaControle.clock >= 0) /////////////////TODO: verificar se esse método consegue verificar se pegou uma tabela
+            if(strcmp(enderecoServer, ""))
             {
-                waitingTable = 0;
+                waitingServerIp = 0;
             }
             else
             {
@@ -393,48 +434,27 @@ void *monitoring()
             }
 
 
-
-
-            //se não receber inicia uma tabela vazia e chama algoritmo de eleição
+            //se não receber inicia uma tabela vazia e se torna server
             if(controle < 0)
             {
-
-                //for debug only????????????????????????////////////////////////////////////////////////////////////////
-
                 isServer = 1;
-                printf("starting table now");
-                pcInfo this  = getIPandName();
-                this.isServer = 1;
+
+                pcInfo thisC  = getIPandName();
+                thisC.isServer = 1;
                 posicao = 0;
+
                 init_table();
-                tabelaAtual;
-                insertHost(this);
+                insertHost(thisC);
 
                 printTable();
 
 	            pthread_t tid;
 	            pthread_create( &tid, NULL ,  serverRotine, NULL);
-                ///////////////////////////////////////////////////////////////////////////////////////for debug only/////////
 
 
-
-
-                isElecting = 1;
-                /////////////////////TODO:start thread de eleição que, ao terminar, muda o is electing para false
                 controle = CONTROLTIMES;
-
-            }
-
-            //espera a eleicao terminar
-            while(isElecting)
-            {
-                sleep(1);
             }
         }
-                printf("received table");
-                fflush(stdout);
-        //atualiza a tabela local
-        tabelaAtual = tabelaControle;
 
 
         for (int i = 0; i < MAXCONNECTIONS; i++)
@@ -451,18 +471,8 @@ void *monitoring()
 
         if(posicao < 0)
         {
-            for (int i = 0; i < MAXCONNECTIONS; i++)
-            {
-                printTable();
-                if(tabelaAtual.tabela[i].isServer)
-                {
-                    strcpy(ipServer, tabelaAtual.tabela[i].ipNumber);
-                    printf(ipServer);
-                    break;
-                }
-            }
 
-            if(ipServer != "")
+            if(enderecoServer != "")
             {
                 //Send this pc data for server to be included in table
 
@@ -474,7 +484,7 @@ void *monitoring()
 	            pthread_t tid;
 
 
-	            server = gethostbyname(ipServer);
+	            server = gethostbyname(enderecoServer);
 	            if (server == NULL) {
                     fprintf(stderr,"ERROR, no such host\n");
                     exit(0);
@@ -505,7 +515,8 @@ void *monitoring()
 
     // Caso estejam: Recebe e armazena posição, envia mensagem de status ao servidor na porta X+posição passando como parâmetro o ip do servidor
 
-    // INICIA THREAD DE VERIFICAÇÃO
+	pthread_t tid;
+    pthread_create( &tid, NULL ,  sendCurrentStatus, NULL);
 
     // Loop waiting for user input
     char input[256];

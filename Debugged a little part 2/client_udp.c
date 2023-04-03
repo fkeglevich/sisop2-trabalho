@@ -88,11 +88,11 @@ char* getMac()
 char* getHost()
 {
     char hostbuffer[256]; //This will store the hostname of this pc
-    int hostname;  
+    int hostname;
     // To retrieve hostname
     hostname = gethostname(hostbuffer, sizeof(hostbuffer));
     checkHostName(hostname);
-    char *hostNew = hostbuffer;
+    char *hostNew = strdup(hostbuffer);
     return hostNew;
 //return "slalalal";
 }
@@ -126,52 +126,52 @@ void *sendStatus(void* pcDetails)
 	struct sockaddr_in serv_addr3, serv_addr, cli_addr3;
 	char buffer[256];
 	struct hostent *server;
-		
+
 	server = gethostbyname(clientInfo->ipNumber);
-    if ((sockfd3 = socket(AF_INET, SOCK_DGRAM, 0)) == -1) 
+    if ((sockfd3 = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
 		printf("ERROR opening socket");
 
 	serv_addr3.sin_family = AF_INET;
 	serv_addr3.sin_port = htons(currentPort);
 	serv_addr3.sin_addr.s_addr = INADDR_ANY;
-	bzero(&(serv_addr3.sin_zero), 8);    
-	 
-	if (bind(sockfd3, (struct sockaddr *) &serv_addr3, sizeof(struct sockaddr)) < 0) 
+	bzero(&(serv_addr3.sin_zero), 8);
+
+	if (bind(sockfd3, (struct sockaddr *) &serv_addr3, sizeof(struct sockaddr)) < 0)
 		printf("ERROR on binding");
 
-	if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) 
+	if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
 		printf("ERROR opening socket");
 
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_port = htons(currentPort + 1000);
 	serv_addr.sin_addr = *((struct in_addr *)server->h_addr);
-	bzero(&(serv_addr.sin_zero), 8);   
+	bzero(&(serv_addr.sin_zero), 8);
 
-	
-	//if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(struct sockaddr)) < 0) 
+
+	//if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(struct sockaddr)) < 0)
 	//	printf("ERROR on binding hereeeee");
-	
+
 	clilen3 = sizeof(struct sockaddr_in);
-	
+
 
 
 	while(VariavelDeControle)
 	{
-		
+
     	n3 = recvfrom(sockfd3, buffer, sizeof(buffer), 0, (struct sockaddr *) &cli_addr3, &clilen3);
 		//printf("Received a datagram: %s\n", buffer);
 
 			n3 = sendto(sockfd, "I'm awake", sizeof("I'm awake"), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
-	
+
 	}
 
 	printf("\nEnding conection.");
 	n3 = sendto(sockfd, "End", sizeof("End"), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
 	printf(".");
 	n3 = sendto(sockfd, "End", sizeof("End"), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
-	printf(".");	
+	printf(".");
 	n3 = sendto(sockfd, "End", sizeof("End"), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
-	
+
 
 	pthread_exit(NULL);
 
@@ -187,25 +187,25 @@ int clientUDP()
 	struct sockaddr_in serv_addr, cli_addr;
 	char managerIP[256];
 	char *ret;
-		
-    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) 
+
+    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
 		printf("ERROR opening socket");
 
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_port = htons(PORTBROADCAST);
 	serv_addr.sin_addr.s_addr = INADDR_ANY;
-	bzero(&(serv_addr.sin_zero), 8);    
-	 
-	if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(struct sockaddr)) < 0) 
+	bzero(&(serv_addr.sin_zero), 8);
+
+	if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(struct sockaddr)) < 0)
 		printf("ERROR on binding");
-	
+
 	clilen = sizeof(struct sockaddr_in);
-	
+
     int f = 1;
     n = recvfrom(sockfd, managerIP, sizeof(managerIP), 0, (struct sockaddr *) &cli_addr, &clilen);
 
 
- 
+
 
 	close(sockfd);
     ////////////////////////////////end of first receive, start of first send////////////////////////////////
@@ -226,22 +226,22 @@ fflush(stdout);
 	if (server == NULL) {
         fprintf(stderr,"ERROR, no such host\n");
         exit(0);
-    }	
-	
+    }
+
 	if ((sockfd2 = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
 		printf("ERROR opening socket");
-	
+
 	serv_addr2.sin_family = AF_INET;
-	serv_addr2.sin_port = htons(PORT);	
+	serv_addr2.sin_port = htons(PORT);
 	serv_addr2.sin_addr = *((struct in_addr *)server->h_addr);
-	
+
 	bzero(&(serv_addr2.sin_zero), 8);
 
 	int availablePos;
 
 	n2 = sendto(sockfd2, &newCon, sizeof(newCon), 0, (const struct sockaddr *) &serv_addr2, sizeof(struct sockaddr_in));
 
-			
+
 	n = recvfrom(sockfd2, &availablePos, sizeof(availablePos), 0, (struct sockaddr *) &cli_addr, &clilen);
 
 	newCon.pos = availablePos;
