@@ -55,7 +55,7 @@ void *checkCurrentStatus(void *pos)
 {
     int *checkPosicao = pos;
 	int posAux = *checkPosicao;
-int controle;
+    int controle;
 	char mensagem[256];
 	printf("posicao recebida %d", posAux);
 
@@ -93,15 +93,15 @@ int controle;
 	while(isServer)
 	{
 		
-            n = recvfrom(sockfd, &mensagem, sizeof(mensagem), 0, (struct sockaddr *) &serv_addr, &clilen);
-            if(!strcmp(mensagem,"Awake") 
-            {		
-		if(controle <= 0)
-		{
-			//TODO:Atualiza status na tabela
-		}
-                controle = CONTROLTIMES;
-            }
+        n = recvfrom(sockfd, &mensagem, sizeof(mensagem), 0, (struct sockaddr *) &serv_addr, &clilen);
+        if(!strcmp(mensagem,"Awake") )
+        {		
+		    if(controle <= 0)
+		    {
+			    //TODO:Atualiza status na tabela
+		    }
+            controle = CONTROLTIMES;
+        }
 		else
 		{
 			controle--;
@@ -180,18 +180,21 @@ void *receiveNewConnections()
 
 void *serverRotine()
 {
+
+    printf("started server function");
+    fflush(stdout);
 	pthread_t tid[MAXCONNECTIONS];
     if(isServer)
     {
         for(int i = 0; i < MAXCONNECTIONS; i++)
         {
 		///////////TODO: verificar se tem alguem nessa posicao da tabela
-		pthread_create( &tid[i], NULL ,  checkCurrentStatus, &i);
+		
+        //commented for debug purposes
+        //pthread_create( &tid[i], NULL ,  checkCurrentStatus, &i);
             
         }
     }
-
-    ////////////////criar thread de recebimento de novas conexões (kinda done)
 
     //////////////////////////////////Starting socket initialization//////////////////////////////////////
 
@@ -218,7 +221,11 @@ void *serverRotine()
 
     while(isServer)
     {
-        n = sendto(sockfd, &tabelaAtual, sizeof(tabelaAtual), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
+        printf("is Sending");
+        fflush(stdout);
+        //n = sendto(sockfd, &tabelaAtual, sizeof(tabelaAtual), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
+        n = sendto(sockfd, &table, sizeof(table), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
+		
 		sleep(2);
     }
 
@@ -334,7 +341,6 @@ void *monitoring()
     if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO,&tv,sizeof(tv)) < 0) 
 	    perror("Error");	
     //////////////////////////////////////////socket initialization end///////////////////////////////////////////
-         
 
 
     while (posicao < 0)
@@ -346,13 +352,24 @@ void *monitoring()
         controle = CONTROLTIMES;
 
 
+         
 
-        
         //receber mensagem do servidor com a tabela
         while(waitingTable)
         {
+
+            printf("reached here");
+            fflush(stdout);
+        
             //verifica se recebeu informacao válida
-            n = recvfrom(sockfd, &tabelaControle, sizeof(tabelaControle), 0, (struct sockaddr *) &serv_addr, &clilen);
+            //n = recvfrom(sockfd, &tabelaControle, sizeof(tabelaControle), 0, (struct sockaddr *) &serv_addr, &clilen);
+            n = recvfrom(sockfd, &table, sizeof(table), 0, (struct sockaddr *) &serv_addr, &clilen);
+            if(table[0].status)
+            {
+                printf("caiu no ifao");
+                fflush(stdout);
+            }
+
             if(tabelaControle.clock >= 0) /////////////////TODO: verificar se esse método consegue verificar se pegou uma tabela
             {
                 waitingTable = 0;
@@ -365,6 +382,22 @@ void *monitoring()
             //se não receber inicia uma tabela vazia e chama algoritmo de eleição
             if(controle < 0)
             {
+
+                //for debug only????????????????????????////////////////////////////////////////////////////////////////
+                init_table();
+
+                strcpy(table[0].ipadd,"kakaka");
+                printf(table[0].ipadd);
+                fflush(stdout);
+	            pthread_t tid;
+                isServer = 1;
+                
+	            pthread_create( &tid, NULL ,  serverRotine, NULL);
+                ///////////////////////////////////////////////////////////////////////////////////////for debug only/////////
+
+
+
+
                 isElecting = 1;
                 /////////////////////TODO:start thread de eleição que, ao terminar, muda o is electing para false
                 controle = CONTROLTIMES;
@@ -377,7 +410,8 @@ void *monitoring()
                 sleep(1);
             }
         }   
-
+                printf("received table");
+                fflush(stdout);
         //atualiza a tabela local
         tabelaAtual = tabelaControle;
 
@@ -472,9 +506,9 @@ int main(int argc, char *argv[])
 	pthread_t tid;
 	void *ret;
 
-	//pthread_create( &tid, NULL ,  monitoring, NULL);
+	pthread_create( &tid, NULL ,  monitoring, NULL);
 
-	pthread_create( &tid, NULL ,  checkCurrentStatus, &posicao);
+	//pthread_create( &tid, NULL ,  checkCurrentStatus, &posicao);
 
     pthread_join(tid, ret);
     printf("waited");
