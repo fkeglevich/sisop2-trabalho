@@ -169,7 +169,8 @@ void *receiveNewConnections()
         {
 		insertHost(thisPC);
 		printTable();
-            /////////////TODO:insere na tabela as informações
+                //starta thread de monitoramento
+                /////////////TODO:insere na tabela as informações
         }
 	fflush(stdout);
         isNewConnection = 1;
@@ -318,6 +319,8 @@ void *monitoring()
 {
     pcInfo thisPC = getIPandName();
 
+
+            	printf("\npcinfo1 info:%s\n", thisPC.ipNumber);
     char ipServer[256] = "";
 
     fullTable EmptyTable;
@@ -332,7 +335,7 @@ void *monitoring()
 	tv.tv_sec = 2;
 	tv.tv_usec = 0;
 
-
+            	printf("\npcinfo1 info:%s\n", thisPC.ipNumber);
 
     ///////////////////////////////////////////socket initialization///////////////////////////////////////////////
     int sockfd, n;
@@ -368,6 +371,7 @@ void *monitoring()
 
 
 
+            	printf("\npcinfo1 info:%s\n", thisPC.ipNumber);
 
         //receber mensagem do servidor com a tabela
         while(waitingTable)
@@ -487,7 +491,7 @@ void *monitoring()
 
                 //////////////////////////////end of socket initialization
 
-            	printf("\nstarted sending info\n");
+            	printf("\nstarted sending info:%s\n", thisPC.ipNumber);
 	            n2 = sendto(sockfdSendInfo, &thisPC, sizeof(thisPC), 0, (const struct sockaddr *) &serv_addrServer, sizeof(struct sockaddr_in));
 
             }
