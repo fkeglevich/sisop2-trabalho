@@ -126,6 +126,30 @@ void removeHost(int id)
     // MUTEX CODE END
 }
 
+void setServer(int id)
+{
+    // MUTEX CODE BEGIN
+    pthread_mutex_lock(&lock);
+    tabelaAtual.tabela[id].isServer = 1;
+    tabelaAtual.clock++;
+    pthread_mutex_unlock(&lock);
+    // MUTEX CODE END
+}
+
+void clearServer()
+{
+    // MUTEX CODE BEGIN
+    pthread_mutex_lock(&lock);
+    for(int i = 0; i < TABLE_SIZE; i++)
+    {
+        tabelaAtual.tabela[i].isServer = 0;
+    }
+
+    tabelaAtual.clock++;
+    pthread_mutex_unlock(&lock);
+    // MUTEX CODE END
+}
+
 void printHost(pcInfo host)
 {
     printf("Host hostname: %s ipaddress: %s macaddress: %s status: %s index: %d is Server: %d\n", host.hostName, host.ipNumber, host.macAddress, status_to_text(host.status), host.pos, host.isServer);

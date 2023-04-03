@@ -31,7 +31,9 @@
 int posicao;
 int isElecting;
 int isServer;
+int notExiting;
 
+sem_t semaphore;
 /*
 typedef struct table_struct
 {
@@ -61,10 +63,12 @@ void *checkCurrentStatus(void *pos)
     int *checkPosicao = pos;
 	int posAux = *checkPosicao;
 
+
+	sem_post(&semaphore);
 	//TODO:colocar semaforo aqui//////////////////////////////////////////////////////////////////////////////////////////
     int controle;
 	char mensagem[256];
-
+    int isIn = 1;
 
     //time struct to define timeout for receive message
 	struct timeval tv;
@@ -87,7 +91,7 @@ void *checkCurrentStatus(void *pos)
     bzero(&(serv_addr.sin_zero), 8);
 
     if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(struct sockaddr)) < 0)
-    	printf("ERROR on binding");
+    	printf("ERROR on binding 4");
 
     clilen = sizeof(struct sockaddr_in);
     if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO,&tv,sizeof(tv)) < 0)
@@ -96,22 +100,33 @@ void *checkCurrentStatus(void *pos)
 
 
 	controle = CONTROLTIMES;
-	while(isServer)
+	while(isServer && isIn)
 	{
 
 
         n = recvfrom(sockfd, &mensagem, sizeof(mensagem), 0, (struct sockaddr *) &serv_addr, &clilen);
         if(!strcmp(mensagem,"Awake") )
         {
+            printf("received in position:%d", posAux);
 		    if(controle <= 0)
 		    {
                 wakeUpHost(posAux);
                 printTable();
 		    }
             controle = CONTROLTIMES;
+            strcpy(mensagem, "");
         }
-		else
+		else if(!strcmp(mensagem,"Ended") )
+        {
+            printf("ended connection in position:%d", posAux);
+            removeHost(posAux);
+            printTable();
+            isIn = 0;
+
+        }
+        else
 		{
+            printf("didn't received in position:%d", posAux);
 			controle--;
 		}
 
@@ -125,8 +140,9 @@ void *checkCurrentStatus(void *pos)
 		}
 	}
     //////////////////////////TODO: Terminar
+	printf("Exited while\n");
+    close(sockfd);
 	fflush(stdout);
-    isElecting = 0;
 	pthread_exit(NULL);
 }
 
@@ -154,7 +170,7 @@ void *receiveNewConnections()
 	bzero(&(serv_addr.sin_zero), 8);
 
 	if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(struct sockaddr)) < 0)
-		printf("ERROR on binding");
+		printf("ERROR on binding 1");
 
 	clilen = sizeof(struct sockaddr_in);
 
@@ -178,6 +194,7 @@ void *receiveNewConnections()
             thisPC.pos = insertHost(thisPC);
             printTable();
             pthread_t tid;
+            sem_init(&semaphore,0,1);
             pthread_create( &tid, NULL ,  checkCurrentStatus, &thisPC.pos);
                 //starta thread de monitoramento
                 /////////////TODO:insere na tabela as informações
@@ -235,7 +252,7 @@ void *send_table(){
 
 void *serverRotine()
 {
-
+    sem_init(&semaphore,0,1);
     printf("started server function");
     fflush(stdout);
 	pthread_t tid[MAXCONNECTIONS];
@@ -244,10 +261,11 @@ void *serverRotine()
         for(int i = 0; i < MAXCONNECTIONS; i++)
         {
 		///////////TODO: verificar se tem alguem nessa posicao da tabela
-
-        //commented for debug purposes
-        //pthread_create( &tid[i], NULL ,  checkCurrentStatus, &i);
-        //TODO: Colocar semaforo aqui
+            if(!tabelaAtual.tabela[i].isServer && tabelaAtual.tabela[i].pos >= 0)
+            {
+                sem_init(&semaphore,0,1);
+                pthread_create( &tid[i], NULL ,  checkCurrentStatus, &i);
+            }
         }
     }
     //////////////////////////////////Starting socket initialization//////////////////////////////////////
@@ -298,6 +316,8 @@ void *serverRotine()
     }
 
     printf("ended server function\n");
+
+	sem_destroy(&semaphore);
 	pthread_exit(NULL);
 
 }
@@ -322,7 +342,7 @@ void *receive_table(){
     bzero(&(serv_addr.sin_zero), 8);
 
     if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(struct sockaddr)) < 0)
-    	printf("ERROR on binding");
+    	printf("ERROR on binding 2");
 
     clilen = sizeof(struct sockaddr_in);
     if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO,&tv,sizeof(tv)) < 0)
@@ -343,16 +363,20 @@ void *receive_table(){
         //n = recvfrom(sockfd, &table, sizeof(table), 0, (struct sockaddr *) &serv_addr, &clilen);
 
 
-        if(tabelaControle.clock >= 0)
+        if(tabelaControle.clock > 0)
         {
-            printf("received table");
-            printf("\nclock recebido: %d\n",tabelaControle.clock);
-            printf("\nclock daqui: %d\n",tabelaAtual.clock);
+
             if(tabelaControle.clock > tabelaAtual.clock)
             {
                 printf("atualizou a tabela");
                 tabelaAtual = tabelaControle;
                 printTable();
+                if(isServer)
+                {
+                    //TODO: chama eleição
+                    printf("servidor também recebe");
+                }
+
             }
 
             controle = CONTROLTIMES;
@@ -391,7 +415,10 @@ void *sendCurrentStatus()
 	struct hostent *server;
 	pthread_t tid;
 
-    while(1)
+
+    int controle = CONTROLTIMES;
+
+    while(controle > 0)
     {
         for (int i = 0; i < MAXCONNECTIONS; i++)
         {
@@ -428,16 +455,20 @@ void *sendCurrentStatus()
 
         }
 
-        n2 = sendto(sockfdSendStatus, "Awake", sizeof("Awake"), 0, (const struct sockaddr *) &serv_addrServer, sizeof(struct sockaddr_in));
-
-
+        if(notExiting)
+            n2 = sendto(sockfdSendStatus, "Awake", sizeof("Awake"), 0, (const struct sockaddr *) &serv_addrServer, sizeof(struct sockaddr_in));
+        else
+        {
+            controle--;
+            n2 = sendto(sockfdSendStatus, "Ended", sizeof("Ended"), 0, (const struct sockaddr *) &serv_addrServer, sizeof(struct sockaddr_in));
+        }
         sleep(1);
 
 
     }
     //pegar o ip do server e enviar mensagens de status
 
-
+    printf("\\n ended while \n\n");
 
 	pthread_exit(NULL);
 
@@ -464,9 +495,6 @@ void *monitoring()
 	tv.tv_usec = 0;
 
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////TODO: começa rotina de recebimento de tabela
-
-
     ///////////////////////////////////////////socket initialization///////////////////////////////////////////////
     int sockfd, n;
     socklen_t clilen;
@@ -483,7 +511,7 @@ void *monitoring()
     bzero(&(serv_addr.sin_zero), 8);
 
     if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(struct sockaddr)) < 0)
-    	printf("ERROR on binding");
+    	printf("ERROR on binding 3");
 
     clilen = sizeof(struct sockaddr_in);
     if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO,&tv,sizeof(tv)) < 0)
@@ -496,14 +524,9 @@ void *monitoring()
     while (posicao < 0)
     {
 
-        //////////////TODO: verificar esse controle de tabela para ocorrer normalmente, não apenas para inicializar a posição talvez fazer um while true e um if depois para a posição////////////////////
-        tabelaControle = EmptyTable;
         waitingServerIp = 1;
         controle = CONTROLTIMES;
         char enderecoServer[256]  = "";
-
-
-
 
         //receber mensagem do servidor com a tabela
         while(waitingServerIp)
@@ -550,10 +573,7 @@ void *monitoring()
         printf("ended waiting server ip loop");
         for (int i = 0; i < MAXCONNECTIONS; i++)
         {
-            printf(tabelaAtual.tabela[i].ipNumber);
-            printf("&");
-            printf(thisPC.ipNumber);
-            printf("\n\n");
+
             if(!strcmp(tabelaAtual.tabela[i].ipNumber, thisPC.ipNumber))
             {
                 printf("entrou no if\n\n");
@@ -622,7 +642,8 @@ void *monitoring()
     	fgets(input, 256, stdin);
     }
 
-    //TODO: send disconnection message
+    notExiting = 0;
+    sleep(3);
 	pthread_exit(NULL);
 
 }
@@ -630,6 +651,7 @@ void *monitoring()
 
 int main(int argc, char *argv[])
 {
+    notExiting = 1;
     posicao = -1;
     isElecting = 0;
     isServer = 0;
