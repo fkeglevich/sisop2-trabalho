@@ -50,11 +50,86 @@ fullTable tabelaAtual;
 */
 
 
+void *checkForElection()
+{
+
+    /////////////////////////////////Socket Initialization//////////////////////////////////////////
+    int sockfd, n;
+	socklen_t clilen;
+	struct sockaddr_in serv_addr, cli_addr;
+	char managerIP[256];
+	char *ret;
+
+    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
+		printf("ERROR opening socket");
+
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_port = htons(PORT_CALLING_ELECTION);
+	serv_addr.sin_addr.s_addr = INADDR_ANY;
+	bzero(&(serv_addr.sin_zero), 8);
+
+	if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(struct sockaddr)) < 0)
+		printf("ERROR on binding 1");
+
+	clilen = sizeof(struct sockaddr_in);
+
+    //////////////////////////////////////End of Socket Initialization///////////////////////////////
+
+
+
+    while(1)
+    {
+
+        fullTable EmptyTable;
+
+        electionTable receiving;
+        receiving.tabelaEnviada = EmptyTable;
+        strcpy(receiving.ipNumber, "");
+
+
+        n = recvfrom(sockfd, &receiving, sizeof(receiving), 0, (struct sockaddr *) &serv_addr, &clilen);
+
+
+        if(receiving.tabelaEnviada.clock > tabelaAtual.clock)
+        {
+            tabelaAtual = receiving.tabelaEnviada;
+        }
+
+        char message[256];
+        strcpy(message, "Election");
+
+        int sockfd2, n2;
+        unsigned int length2;
+        struct sockaddr_in serv_addr2, from;
+        struct hostent *server2;
+
+        if ((sockfd2 = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
+            printf("ERROR opening socket");
+
+        serv_addr2.sin_family = AF_INET;
+        serv_addr2.sin_port = htons(PORT_RECEIVING_ELECTION_RESPONSE);
+        serv_addr2.sin_addr.s_addr = inet_addr(tabelaAtual.tabela[i].ipNumber);
+        bzero(&(serv_addr2.sin_zero), 8);
+
+        n = sendto(sockfd2, &message, sizeof(message), 0, (const struct sockaddr *) &serv_addr2, sizeof(struct sockaddr_in));
+        close(sockfd2);
+
+
+
+        pthread_t tid;
+        pthread_create( &tid, NULL ,  electionRoutine, NULL);
+    }
+
+
+}
+
+
 
 void *electionRoutine()
 {
+    printf("started election routine");
     isElecting = 1;
-    //////////////////////////TODO: Implementar
+
     char *lastIPPortion;
     int myID, n, sockfd;
     struct sockaddr_in serv_addr;
@@ -65,7 +140,11 @@ void *electionRoutine()
     myID = atoi(lastIPPortion);
 
     printf("Node %s, with ID: %d started the election.\n", thisPC.ipNumber, myID);
-    
+
+    electionTable calling;
+    calling.tabelaEnviada = tabelaAtual;
+    calling.ipNumber = thisPC.ipNumber;
+
     // Broadcast an election message to all higher nodes
     for (int j = myID + 1; j < NUM_IDS; j++) {
         unsigned long int ip_int;
@@ -81,128 +160,75 @@ void *electionRoutine()
         serv_addr.sin_addr.s_addr = ip_int;
         bzero(&(serv_addr.sin_zero), 8);
 
-        n = sendto(sockfd, &tabelaAtual, sizeof(tabelaAtual), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
+        n = sendto(sockfd, &calling, sizeof(calling), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
         close(sockfd);
     }
 
+    int controle;
+    int receivingFlag = 1;
+    char mensagem[256];
+
+    //time struct to define timeout for receive message
+    struct timeval tv;
+    tv.tv_sec = 3;
+    tv.tv_usec = 0;
+
+    ///////////////////////////////////////////socket initialization///////////////////////////////////////////////
+    int sockfd, n;
+    socklen_t clilen;
+    struct sockaddr_in serv_addr;
+    char status[256];
+    char *ret;
+
+    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
+        printf("ERROR opening socket");
+
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(PORT_RECEIVING_ELECTION_RESPONSE);
+    serv_addr.sin_addr.s_addr = INADDR_ANY;
+    bzero(&(serv_addr.sin_zero), 8);
+
+    if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(struct sockaddr)) < 0)
+        printf("ERROR on binding");
+
+    clilen = sizeof(struct sockaddr_in);
+    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO,&tv,sizeof(tv)) < 0)
+        perror("Error");
+    //////////////////////////////////////////socket initialization end///////////////////////////////////////////
+
+    controle = CONTROLTIMES;
+    while(receivingFlag > 0)
+    {
 
 
-    is_running = 1;
-    while (is_running > 0) {
-
-        int controle;
-        int receivingFlag = 1;
-        char mensagem[256];
-
-        //time struct to define timeout for receive message
-        struct timeval tv;
-        tv.tv_sec = 3;
-        tv.tv_usec = 0;
-
-        ///////////////////////////////////////////socket initialization///////////////////////////////////////////////
-        int sockfd, n;
-        socklen_t clilen;
-        struct sockaddr_in serv_addr;
-        char status[256];
-        char *ret;
-
-        if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
-            printf("ERROR opening socket");
-
-        serv_addr.sin_family = AF_INET;
-        serv_addr.sin_port = htons(PORT_RECEIVING_ELECTION_RESPONSE);
-        serv_addr.sin_addr.s_addr = INADDR_ANY;
-        bzero(&(serv_addr.sin_zero), 8);
-
-        if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(struct sockaddr)) < 0)
-            printf("ERROR on binding");
-
-        clilen = sizeof(struct sockaddr_in);
-        if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO,&tv,sizeof(tv)) < 0)
-            perror("Error");
-        //////////////////////////////////////////socket initialization end///////////////////////////////////////////
-
-        controle = CONTROLTIMES;
-        while(receivingFlag > 0)
+        n = recvfrom(sockfd, &mensagem, sizeof(mensagem), 0, (struct sockaddr *) &serv_addr, &clilen);
+        if(!strcmp(mensagem,"Election") )
         {
-
-
-            n = recvfrom(sockfd, &mensagem, sizeof(mensagem), 0, (struct sockaddr *) &serv_addr, &clilen);
-            if(!strcmp(mensagem,"Election") )
-            {
-               //Achei o lider
-               receivingFlag = 0;
-               isElecting = 0;
-            }
-            else
-            {
-                controle--;
-            }
-
-            if(controle <= 0)
-            {
-                //sou o  Lider
-                isServer = 1;
-                tabelaAtual.tabela[posicao].isServer = 1;
-                //incrementar clock da tablea
-
-                receivingFlag = 0;
-                isElecting = 0;
-            }
+            //Achei o lider
+            receivingFlag = 0;
+            isElecting = 0;
         }
-        //////////////////////////TODO: Terminar
-        fflush(stdout);
-        isElecting = 0;
-        pthread_exit(NULL);
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
-
-
-
-
-
-
-
-        int i;
-        for (i = myID + 1; i < NUM_IDS; i++) {
-            printf("Node %d waits for a reply from node %d.\n", node_id, nodes[i]);
-
-            // Simulate a delay before receiving a reply
-            for (j = 0; j < 10000000; j++) {}
-
-            // Nota: colocar um IF-else aqui
-            // If no reply is received, declare the higher node dead and start a new election
-            printf("Node %d receives a reply from node %d.\n", node_id, nodes[i]);
-            break;
-            
+        else
+        {
+            controle--;
         }
-        if (i == NUM_IDS) {
-            // If all higher nodes have replied, declare this node as the coordinator
-            coordinator = node_id;
-            printf("Node %d is the new coordinator.\n", coordinator);
-            is_running = 0;
-        } else {
-            // If a higher node replied, become a follower and wait for the new coordinator to be announced
-            node_id = nodes[i];
-            printf("Node %d becomes a follower and waits for the new coordinator.\n", node_id);
+
+        if(controle <= 0)
+        {
+            //sou o  Lider
+            isServer = 1;
+            tabelaAtual.tabela[posicao].isServer = 1;
+            //incrementar clock da tablea
+
+            receivingFlag = 0;
+            isElecting = 0;
         }
     }
 
-
+    fflush(stdout);
     isElecting = 0;
-	pthread_exit(NULL);
+    pthread_exit(NULL);
+
 }
 
 
@@ -214,7 +240,7 @@ void *checkCurrentStatus(void *pos)
 
 
 	sem_post(&semaphore);
-	//TODO:colocar semaforo aqui//////////////////////////////////////////////////////////////////////////////////////////
+
     int controle;
 	char mensagem[256];
     int isIn = 1;
@@ -288,8 +314,7 @@ void *checkCurrentStatus(void *pos)
 			}
 		}
 	}
-    //////////////////////////TODO: Terminar
-	printf("Exited while\n");
+
     close(sockfd);
 	fflush(stdout);
 	pthread_exit(NULL);
@@ -345,8 +370,6 @@ void *receiveNewConnections()
             pthread_t tid;
             sem_init(&semaphore,0,1);
             pthread_create( &tid, NULL ,  checkCurrentStatus, &thisPC.pos);
-                //starta thread de monitoramento
-                /////////////TODO:insere na tabela as informações
         }
 	fflush(stdout);
         isNewConnection = 1;
@@ -409,7 +432,6 @@ void *serverRotine()
     {
         for(int i = 0; i < MAXCONNECTIONS; i++)
         {
-		///////////TODO: verificar se tem alguem nessa posicao da tabela
             if(!tabelaAtual.tabela[i].isServer && tabelaAtual.tabela[i].pos >= 0)
             {
                 sem_init(&semaphore,0,1);
@@ -419,9 +441,9 @@ void *serverRotine()
     }
     //////////////////////////////////Starting socket initialization//////////////////////////////////////
 
+    //creating thread to send information in loop
     pthread_t tid3;
 	pthread_create( &tid3, NULL ,  send_table, NULL);
-    //TODO: loopar o envio da tabela
 
 	//Creating thread to receive new connections
 
@@ -433,7 +455,6 @@ void *serverRotine()
 
     //////////////////////////////////Starting socket initialization//////////////////////////////////////
 
-    /////////////////////////////TODO: mudar de broadcast para multicast(envia uma mensagem para cada endereco)
     int sockfd, n;
 	unsigned int length;
 	struct sockaddr_in serv_addr, from;
@@ -507,14 +528,18 @@ void *receive_table(){
     while(1)
     {
         tabelaControle = EmptyTable;
+
+        printf("Trying to receive\n");
+        tabelaControle.clock = -1;
         //verifica se recebeu informacao válida
         n = recvfrom(sockfd, &tabelaControle, sizeof(tabelaControle), 0, (struct sockaddr *) &serv_addr, &clilen);
-        //n = recvfrom(sockfd, &table, sizeof(table), 0, (struct sockaddr *) &serv_addr, &clilen);
-
+        printf("received\n\n");
+        fflush(stdout);
 
         if(tabelaControle.clock > 0)
         {
-
+            printf("%d\n", tabelaControle.clock);
+            fflush(stdout);
             if(tabelaControle.clock > tabelaAtual.clock)
             {
                 printf("atualizou a tabela");
@@ -522,7 +547,8 @@ void *receive_table(){
                 printTable();
                 if(isServer)
                 {
-                    //TODO: chama eleição
+                    pthread_t tid;
+                    pthread_create( &tid, NULL,  electionRoutine, NULL);
                     printf("servidor também recebe");
                 }
 
@@ -533,6 +559,7 @@ void *receive_table(){
         else
         {
             printf("couldn't receive table");
+            fflush(stdout);
             controle--;
         }
 
@@ -542,13 +569,13 @@ void *receive_table(){
         //se não receber inicia uma tabela vazia e se torna server
             if(controle < 0)
             {
-                //TODO: inicia algoritmo de eleição
-
-
+                printf("didnt receive table\n");
+                pthread_create( &tid, NULL ,  electionRoutine, NULL);
                 controle = CONTROLTIMES;
             }
         }
     }
+    printf("isEnding");
 
 }
 
@@ -683,7 +710,6 @@ void *monitoring()
 
             //verifica se recebeu informacao válida
             n = recvfrom(sockfd, &enderecoServer, sizeof(enderecoServer), 0, (struct sockaddr *) &serv_addr, &clilen);
-            //n = recvfrom(sockfd, &table, sizeof(table), 0, (struct sockaddr *) &serv_addr, &clilen);
 
 
             if(strcmp(enderecoServer, ""))
@@ -725,7 +751,6 @@ void *monitoring()
 
             if(!strcmp(tabelaAtual.tabela[i].ipNumber, thisPC.ipNumber))
             {
-                printf("entrou no if\n\n");
                 thisPC.pos = tabelaAtual.tabela[i].pos;
                 posicao = tabelaAtual.tabela[i].pos;
                 printTable();
@@ -806,9 +831,9 @@ int main(int argc, char *argv[])
     isServer = 0;
 
 	pcInfo newCon;
-	pthread_t tid;
+	pthread_t tid,tid2;
 	void *ret;
-
+	pthread_create( &tid2, NULL ,  checkForElection, NULL);
 	pthread_create( &tid, NULL ,  monitoring, NULL);
 
 	//pthread_create( &tid, NULL ,  checkCurrentStatus, &posicao);

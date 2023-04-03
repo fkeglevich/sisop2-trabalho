@@ -23,6 +23,13 @@ typedef struct table_struct
 } fullTable;
 
 
+typedef struct election_table_struct
+{
+	fullTable tabelaEnviada;
+	char ipNumber[256];
+} electionTable;
+
+
 fullTable tabelaAtual;
 
 // MUTEX CODE BEGIN
