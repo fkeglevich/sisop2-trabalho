@@ -114,7 +114,7 @@ void *electionRoutine()
     bzero(&(serv_addr2.sin_zero), 8);
 
     if (bind(sockfd2, (struct sockaddr *) &serv_addr2, sizeof(struct sockaddr)) < 0)
-        printf("ERROR on binding");
+        printf("ERROR on binding\n");
 
     clilen = sizeof(struct sockaddr_in);
     if (setsockopt(sockfd2, SOL_SOCKET, SO_RCVTIMEO,&tv,sizeof(tv)) < 0)
@@ -154,7 +154,7 @@ void *electionRoutine()
         }
     fflush(stdout);
     }
-
+    print("Closing socktet!\n\n");
     close(sockfd2);
 
     fflush(stdout);
