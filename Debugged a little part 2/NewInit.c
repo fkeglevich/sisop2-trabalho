@@ -125,10 +125,12 @@ void *electionRoutine()
     while(receivingFlag > 0)
     {
 
-
+            printf("entered while");
         n2 = recvfrom(sockfd2, &mensagem, sizeof(mensagem), 0, (struct sockaddr *) &serv_addr2, &clilen);
         if(!strcmp(mensagem,"Election") )
         {
+            
+            printf("found lider");
             //Achei o lider
             receivingFlag = 0;
             isElecting = 0;
@@ -142,12 +144,15 @@ void *electionRoutine()
         {
             //sou o  Lider
             isServer = 1;
-            tabelaAtual.tabela[posicao].isServer = 1;
+            setServer(posicao);
+            //tabelaAtual.tabela[posicao].isServer = 1;
             //incrementar clock da tablea
-
+            
+            printf("i'm lider");
             receivingFlag = 0;
             isElecting = 0;
         }
+    fflush(stdout);
     }
 
     fflush(stdout);
@@ -539,7 +544,6 @@ void *receive_table(){
     {
         tabelaControle = EmptyTable;
 
-        printf("Trying to receive\n");
         tabelaControle.clock = -1;
         //verifica se recebeu informacao válida
         n = recvfrom(sockfd, &tabelaControle, sizeof(tabelaControle), 0, (struct sockaddr *) &serv_addr, &clilen);
@@ -548,18 +552,14 @@ void *receive_table(){
 
         if(tabelaControle.clock > 0)
         {
-            printf("%d\n", tabelaControle.clock);
-            fflush(stdout);
             if(tabelaControle.clock > tabelaAtual.clock)
             {
-                printf("atualizou a tabela");
                 tabelaAtual = tabelaControle;
                 printTable();
                 if(isServer)
                 {
                     pthread_t tid;
                     pthread_create( &tid, NULL,  electionRoutine, NULL);
-                    printf("servidor também recebe");
                 }
 
             }
@@ -568,8 +568,6 @@ void *receive_table(){
         }
         else
         {
-            printf("couldn't receive table");
-            fflush(stdout);
             controle--;
         }
 
@@ -578,9 +576,7 @@ void *receive_table(){
 
         //se não receber inicia uma tabela vazia e se torna server
             if(controle < 0)
-            {
-                printf("didnt receive table\n");
-                
+            {  
 	            pthread_t tid;
                 pthread_create( &tid, NULL ,  electionRoutine, NULL);
                 controle = CONTROLTIMES;
