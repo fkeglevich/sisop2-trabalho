@@ -28,7 +28,7 @@
 #define PORT_CALLING_ELECTION 9000
 #define PORT_RECEIVING_ELECTION_RESPONSE 11000
 
-
+void *serverRotine();
 
 //put global value referring to table
 
@@ -65,6 +65,9 @@ void *electionRoutine()
     myID = atoi(lastIPPortion);
 
     printf("Node %s, with ID: %d started the election.\n", thisPC.ipNumber, myID);
+
+    clearServer();
+    printTable();
 
     electionTable calling;
     calling.tabelaEnviada = tabelaAtual;
@@ -151,6 +154,9 @@ void *electionRoutine()
             printf("i'm lider");
             receivingFlag = 0;
             isElecting = 0;
+
+            pthread_t tid;
+	        pthread_create( &tid, NULL ,  serverRotine, NULL);
         }
     fflush(stdout);
     }
@@ -184,13 +190,14 @@ void *checkForElection()
 	bzero(&(serv_addr.sin_zero), 8);
 
 	if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(struct sockaddr)) < 0)
-		printf("ERROR on binding 1");
+		printf("ERROR on binding 1"); //TODO
 
 	clilen = sizeof(struct sockaddr_in);
 
     //////////////////////////////////////End of Socket Initialization///////////////////////////////
 
-
+    printf("After Socket Initialization on checkForElection\n");
+    fflush(stdout);
 
     while(1)
     {
@@ -253,12 +260,14 @@ void *checkForElection()
 
 void *checkCurrentStatus(void *pos)
 {
-    int *checkPosicao = pos;
-	int posAux = *checkPosicao;
+    // int *checkPosicao = pos;
+	// int posAux = *checkPosicao;
+    int posAux = *((int *) pos);
+    printf("checkCurrentStatus: Arg: %d\n", *((int *) pos) );
 
-
+    free(pos);
 	sem_post(&semaphore);
-
+    printf("Started checkCurrentStatus on position %d\n", posAux);
     int controle;
 	char mensagem[256];
     int isIn = 1;
@@ -362,7 +371,7 @@ void *receiveNewConnections()
 	bzero(&(serv_addr.sin_zero), 8);
 
 	if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(struct sockaddr)) < 0)
-		printf("ERROR on binding 1");
+		printf("ERROR on binding 15\n");
 
 	clilen = sizeof(struct sockaddr_in);
 
@@ -387,7 +396,10 @@ void *receiveNewConnections()
             printTable();
             pthread_t tid;
             sem_init(&semaphore,0,1);
-            pthread_create( &tid, NULL ,  checkCurrentStatus, &thisPC.pos);
+            int *arg = malloc(sizeof(*arg));
+            *arg = thisPC.pos;
+            printf("receiveNewConnections: Arg: %d, %d\n\n", thisPC.pos, *arg);
+            pthread_create( &tid, NULL ,  checkCurrentStatus, arg);
         }
 	fflush(stdout);
         isNewConnection = 1;
@@ -446,14 +458,18 @@ void *serverRotine()
     printf("started server function");
     fflush(stdout);
 	pthread_t tid[MAXCONNECTIONS];
+    printTable();
     if(isServer)
     {
         for(int i = 0; i < MAXCONNECTIONS; i++)
         {
-            if(!tabelaAtual.tabela[i].isServer && tabelaAtual.tabela[i].pos >= 0)
+            if(!tabelaAtual.tabela[i].isServer && tabelaAtual.tabela[i].pos >= 0 && tabelaAtual.tabela[i].pos < MAXCONNECTIONS)
             {
                 sem_init(&semaphore,0,1);
-                pthread_create( &tid[i], NULL ,  checkCurrentStatus, &i);
+                int *arg = malloc(sizeof(*arg));
+                *arg = i;
+                printf("serverRotine: Arg: %d, %d\n\n", i, *arg);
+                pthread_create( &tid[i], NULL ,  checkCurrentStatus, arg);
             }
         }
     }
@@ -849,7 +865,6 @@ int main(int argc, char *argv[])
 	pthread_create( &tid2, NULL ,  checkForElection, NULL);
 	pthread_create( &tid, NULL ,  monitoring, NULL);
 
-	//pthread_create( &tid, NULL ,  checkCurrentStatus, &posicao);
 
     pthread_join(tid, ret);
     printf("waited");
