@@ -3,7 +3,7 @@
 
 #define ASLEEP 0
 #define AWAKEN 1
-#define TABLE_SIZE 3
+#define TABLE_SIZE 4
 #define CHAR_MAX 256
 
 typedef struct pcInfo_struct

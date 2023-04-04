@@ -16,7 +16,7 @@
 #define PORT 40000
 #define PORTBROADCAST 5000
 #define PORTTHREAD 10000
-#define MAXCONNECTIONS 3
+#define MAXCONNECTIONS 4
 
 sem_t semaphore;
 
