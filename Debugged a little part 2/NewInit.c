@@ -117,7 +117,7 @@ void *electionRoutine()
         printf("ERROR on binding");
 
     clilen = sizeof(struct sockaddr_in);
-    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO,&tv,sizeof(tv)) < 0)
+    if (setsockopt(sockfd2, SOL_SOCKET, SO_RCVTIMEO,&tv,sizeof(tv)) < 0)
         perror("Error");
     //////////////////////////////////////////socket initialization end///////////////////////////////////////////
 
@@ -154,6 +154,8 @@ void *electionRoutine()
         }
     fflush(stdout);
     }
+
+    close(sockfd2);
 
     fflush(stdout);
     isElecting = 0;
