@@ -40,13 +40,12 @@ void checkHostName(int hostname)
     }
 }
 
-char* getipNumber()
+struct in_addr getipNumberInterface(const char* interface)
 {
-    int n;
+	int n;
 
     struct ifreq ifr;
 
-    char array[] = "eth0";
     n = socket(AF_INET, SOCK_DGRAM, 0);
 
     //Type of address to retrieve - IPv4 IP address
@@ -55,14 +54,35 @@ char* getipNumber()
 
     //Copy the interface name in the ifreq structure
 
-    strncpy(ifr.ifr_name , array , IFNAMSIZ - 1);
+    strncpy(ifr.ifr_name, interface, IFNAMSIZ - 1);
 
 
     ioctl(n, SIOCGIFADDR, &ifr);
-
     close(n);
 
-    char *apapap = inet_ntoa(( (struct sockaddr_in *)&ifr.ifr_addr )->sin_addr);
+	struct in_addr ip = ( (struct sockaddr_in *)&ifr.ifr_addr )->sin_addr;
+	return ip;
+}
+
+char* getipNumber()
+{
+	struct in_addr ip;
+	const int num = 3;
+	const char *interfaces[] = {"eth0","wlp0s20f3","enp0s3"};
+
+	for (int i = 0; i < num; i++) {
+		// printf("Ip: %d\n", ip.s_addr);
+		// printf("Ip: %d\n", ip.s_addr == 0);
+		// printf("Ip string: %s\n\n", inet_ntoa(ip));
+
+		ip = getipNumberInterface(interfaces[i]);
+		if (ip.s_addr != 0) {
+			break;
+		}
+	}
+
+	// printf("FIM: Ip string: %s\n\n", inet_ntoa(ip));
+    char *apapap = inet_ntoa(ip);
     return apapap;
 }
 
