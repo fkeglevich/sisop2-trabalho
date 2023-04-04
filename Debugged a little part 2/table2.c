@@ -143,6 +143,17 @@ void setServer(int id)
     // MUTEX CODE END
 }
 
+int getServerStatus(int id)
+{
+    int output;
+    // MUTEX CODE BEGIN
+    pthread_mutex_lock(&lock);
+    output = tabelaAtual.tabela[id].isServer;
+    pthread_mutex_unlock(&lock);
+    // MUTEX CODE END
+    return output;
+}
+
 void clearServer()
 {
     // MUTEX CODE BEGIN
@@ -167,7 +178,7 @@ void printTable() {
 
     // MUTEX CODE BEGIN
     pthread_mutex_lock(&lock);
-
+    printf("\n");
     for (i=0; i<TABLE_SIZE; i++) {
         if(tabelaAtual.tabela[i].pos > -1)
             printHost(tabelaAtual.tabela[i]);
