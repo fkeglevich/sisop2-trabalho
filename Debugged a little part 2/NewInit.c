@@ -549,7 +549,7 @@ void *receive_table(){
         tabelaControle.clock = -1;
         //verifica se recebeu informacao válida
         n = recvfrom(sockfd, &tabelaControle, sizeof(tabelaControle), 0, (struct sockaddr *) &serv_addr, &clilen);
-        printf("received\n\n");
+        // printf("received\n\n");
         fflush(stdout);
 
         if(tabelaControle.clock > 0)
