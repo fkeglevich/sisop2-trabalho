@@ -6,6 +6,10 @@
 #define TABLE_SIZE 4
 #define CHAR_MAX 256
 
+#define ELECTION_TABLE_BRODCAST 1
+#define ELECTION_TABLE_LEADER 2
+
+
 typedef struct pcInfo_struct
 {
 	char hostName[256];
@@ -27,6 +31,7 @@ typedef struct election_table_struct
 {
 	fullTable tabelaEnviada;
 	char ipNumber[256];
+    int msgType;
 } electionTable;
 
 
@@ -137,6 +142,10 @@ void setServer(int id)
 {
     // MUTEX CODE BEGIN
     pthread_mutex_lock(&lock);
+    for(int i = 0; i < TABLE_SIZE; i++)
+    {
+        tabelaAtual.tabela[i].isServer = 0;
+    }
     tabelaAtual.tabela[id].isServer = 1;
     tabelaAtual.clock++;
     pthread_mutex_unlock(&lock);

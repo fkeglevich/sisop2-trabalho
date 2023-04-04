@@ -75,13 +75,19 @@ void *electionRoutine()
 
     clearServer();
     printTable();
-
     electionTable calling;
+    calling.msgType = ELECTION_TABLE_BRODCAST;
+
+    // MUTEX CODE BEGIN
+    pthread_mutex_lock(&lock);
     calling.tabelaEnviada = tabelaAtual;
+    pthread_mutex_unlock(&lock);
+    // MUTEX CODE END
+
     strcpy(calling.ipNumber, thisPC.ipNumber);
 
     // Broadcast an election message to all higher nodes
-    for (int j = myID + 1; j < /*NUM_IDS*/20; j++) {
+    for (int j = myID + 1; j < NUM_IDS; j++) {
         unsigned long int ip_int;
 
         ip_int = inet_addr(thisPC.ipNumber);
@@ -143,6 +149,7 @@ void *electionRoutine()
         {
             
             printf("found lider\n");
+            fflush(stdout);
             //Achei o lider
             receivingFlag = 0;
             isElecting = 0;
@@ -157,10 +164,10 @@ void *electionRoutine()
             //sou o  Lider
             isServer = 1;
             setServer(posicao);
-            //tabelaAtual.tabela[posicao].isServer = 1;
-            //incrementar clock da tablea
-            
             printf("i'm lider\n");
+            printTable();
+            fflush(stdout);
+
             receivingFlag = 0;
             isElecting = 0;
 
@@ -205,7 +212,7 @@ void *checkForElection()
 
     //////////////////////////////////////End of Socket Initialization///////////////////////////////
 
-    printf("After Socket Initialization on checkForElection\n");
+    printf("After Socket Initialization on checkForElection 2\n");
     fflush(stdout);
 
     while(1)
@@ -220,30 +227,33 @@ void *checkForElection()
 
         n = recvfrom(sockfd, &receiving, sizeof(receiving), 0, (struct sockaddr *) &serv_addr, &clilen);
 
-        printf("Got election!\n");
-
-        if(receiving.tabelaEnviada.clock > tabelaAtual.clock)
-        {
+        printf("Got election message: %d\n", receiving.msgType);
+        
+        // MUTEX CODE BEGIN
+        pthread_mutex_lock(&lock);
+        if ((receiving.msgType == ELECTION_TABLE_LEADER) || (receiving.tabelaEnviada.clock > tabelaAtual.clock)) {
             tabelaAtual = receiving.tabelaEnviada;
         }
+        pthread_mutex_unlock(&lock);
+        // MUTEX CODE END
 
         char message[256];
-        strcpy(message, "Election");
+        if (receiving.msgType == ELECTION_TABLE_LEADER) {
+            strcpy(message, "Ok");
+        } else {
+            strcpy(message, "Election");
+        }
 
         int sockfd2, n2;
         unsigned int length2;
         struct sockaddr_in serv_addr2, from;
         struct hostent *server2;
 
-
-
-
 	    server2 = gethostbyname(receiving.ipNumber);
 	    if (server2 == NULL) {
             fprintf(stderr,"ERROR, no such host\n");
             exit(0);
         }
-
 
         if ((sockfd2 = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
             printf("ERROR opening socket");
@@ -257,7 +267,7 @@ void *checkForElection()
         close(sockfd2);
 
 
-        if (!isElecting) {
+        if (receiving.msgType != ELECTION_TABLE_LEADER && !isElecting) {
             pthread_t tid;
             pthread_create( &tid, NULL ,  electionRoutine, NULL);
         }
@@ -583,7 +593,11 @@ void *receive_table(){
         {
             if(tabelaControle.clock > tabelaAtual.clock)
             {
+                // MUTEX CODE BEGIN
+                pthread_mutex_lock(&lock);
                 tabelaAtual = tabelaControle;
+                pthread_mutex_unlock(&lock);
+                // MUTEX CODE END
                 printTable();
                 if(isServer && !isElecting)
                 {
