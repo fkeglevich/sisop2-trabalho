@@ -154,7 +154,7 @@ void *electionRoutine()
         }
     fflush(stdout);
     }
-    print("Closing socktet!\n\n");
+    printf("Closing socktet!\n\n");
     close(sockfd2);
 
     fflush(stdout);
@@ -240,9 +240,10 @@ void *checkForElection()
         close(sockfd2);
 
 
-
-        pthread_t tid;
-        pthread_create( &tid, NULL ,  electionRoutine, NULL);
+        if (!isElecting) {
+            pthread_t tid;
+            pthread_create( &tid, NULL ,  electionRoutine, NULL);
+        }
     }
 
 
@@ -558,7 +559,7 @@ void *receive_table(){
             {
                 tabelaAtual = tabelaControle;
                 printTable();
-                if(isServer)
+                if(isServer && !isElecting)
                 {
                     pthread_t tid;
                     pthread_create( &tid, NULL,  electionRoutine, NULL);
@@ -579,8 +580,10 @@ void *receive_table(){
         //se não receber inicia uma tabela vazia e se torna server
             if(controle < 0)
             {  
-	            pthread_t tid;
-                pthread_create( &tid, NULL ,  electionRoutine, NULL);
+                if (!isElecting) {
+                    pthread_t tid;
+                    pthread_create( &tid, NULL ,  electionRoutine, NULL);
+                }
                 controle = CONTROLTIMES;
             }
         }
