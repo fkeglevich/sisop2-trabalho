@@ -52,7 +52,14 @@ fullTable tabelaAtual;
 
 void *electionRoutine()
 {
-    printf("started election routine");
+    printf("started election routine\n");
+
+    if (getServerStatus(posicao) == 1) {
+        printf("Already leader, don't start election!\n");
+        pthread_exit(NULL);
+        return NULL;
+    }
+
     isElecting = 1;
 
     char *lastIPPortion;
@@ -74,21 +81,23 @@ void *electionRoutine()
     strcpy(calling.ipNumber, thisPC.ipNumber);
 
     // Broadcast an election message to all higher nodes
-    for (int j = myID + 1; j < NUM_IDS; j++) {
+    for (int j = myID + 1; j < /*NUM_IDS*/20; j++) {
         unsigned long int ip_int;
 
         ip_int = inet_addr(thisPC.ipNumber);
         ip_int = (ip_int & 0x00FFFFFF) | (j << 24);
 
         if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
-            printf("ERROR opening socket");
+            printf("ERROR opening socket\n");
 
         serv_addr.sin_family = AF_INET;
         serv_addr.sin_port = htons(PORT_CALLING_ELECTION);
         serv_addr.sin_addr.s_addr = ip_int;
         bzero(&(serv_addr.sin_zero), 8);
 
+        printf("Broadicasting to: %d\n", j);
         n = sendto(sockfd, &calling, sizeof(calling), 0, (const struct sockaddr *) &serv_addr, sizeof(struct sockaddr_in));
+        printf("N: %d ", n);
         close(sockfd);
     }
 
@@ -109,7 +118,7 @@ void *electionRoutine()
     char *ret;
 
     if ((sockfd2 = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
-        printf("ERROR opening socket");
+        printf("ERROR opening socket\n");
 
     serv_addr2.sin_family = AF_INET;
     serv_addr2.sin_port = htons(PORT_RECEIVING_ELECTION_RESPONSE);
@@ -128,12 +137,12 @@ void *electionRoutine()
     while(receivingFlag > 0)
     {
 
-            printf("entered while");
+        printf("entered while\n");
         n2 = recvfrom(sockfd2, &mensagem, sizeof(mensagem), 0, (struct sockaddr *) &serv_addr2, &clilen);
-        if(!strcmp(mensagem,"Election") )
+        if(strcmp(mensagem,"Election") == 0)
         {
             
-            printf("found lider");
+            printf("found lider\n");
             //Achei o lider
             receivingFlag = 0;
             isElecting = 0;
@@ -151,14 +160,14 @@ void *electionRoutine()
             //tabelaAtual.tabela[posicao].isServer = 1;
             //incrementar clock da tablea
             
-            printf("i'm lider");
+            printf("i'm lider\n");
             receivingFlag = 0;
             isElecting = 0;
 
             pthread_t tid;
 	        pthread_create( &tid, NULL ,  serverRotine, NULL);
         }
-    fflush(stdout);
+        fflush(stdout);
     }
     printf("Closing socktet!\n\n");
     close(sockfd2);
@@ -190,7 +199,7 @@ void *checkForElection()
 	bzero(&(serv_addr.sin_zero), 8);
 
 	if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(struct sockaddr)) < 0)
-		printf("ERROR on binding 1"); //TODO
+		printf("ERROR on binding 1\n"); //TODO
 
 	clilen = sizeof(struct sockaddr_in);
 
@@ -211,6 +220,7 @@ void *checkForElection()
 
         n = recvfrom(sockfd, &receiving, sizeof(receiving), 0, (struct sockaddr *) &serv_addr, &clilen);
 
+        printf("Got election!\n");
 
         if(receiving.tabelaEnviada.clock > tabelaAtual.clock)
         {
@@ -293,7 +303,7 @@ void *checkCurrentStatus(void *pos)
     bzero(&(serv_addr.sin_zero), 8);
 
     if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(struct sockaddr)) < 0)
-    	printf("ERROR on binding 4");
+    	printf("ERROR on binding 4\n");
 
     clilen = sizeof(struct sockaddr_in);
     if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO,&tv,sizeof(tv)) < 0)
@@ -455,7 +465,7 @@ void *send_table(){
 void *serverRotine()
 {
     sem_init(&semaphore,0,1);
-    printf("started server function");
+    printf("started server function\n");
     fflush(stdout);
 	pthread_t tid[MAXCONNECTIONS];
     printTable();
@@ -546,7 +556,7 @@ void *receive_table(){
     bzero(&(serv_addr.sin_zero), 8);
 
     if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(struct sockaddr)) < 0)
-    	printf("ERROR on binding 2");
+    	printf("ERROR on binding 2\n");
 
     clilen = sizeof(struct sockaddr_in);
     if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO,&tv,sizeof(tv)) < 0)
@@ -716,7 +726,7 @@ void *monitoring()
     bzero(&(serv_addr.sin_zero), 8);
 
     if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(struct sockaddr)) < 0)
-    	printf("ERROR on binding 3");
+    	printf("ERROR on binding 3\n");
 
     clilen = sizeof(struct sockaddr_in);
     if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO,&tv,sizeof(tv)) < 0)
@@ -774,7 +784,7 @@ void *monitoring()
         }
 
 
-        printf("ended waiting server ip loop");
+        printf("ended waiting server ip loop\n");
         for (int i = 0; i < MAXCONNECTIONS; i++)
         {
 
