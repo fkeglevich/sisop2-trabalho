@@ -157,7 +157,7 @@ void *sendStatus(void* pcDetails)
 	bzero(&(serv_addr3.sin_zero), 8);
 
 	if (bind(sockfd3, (struct sockaddr *) &serv_addr3, sizeof(struct sockaddr)) < 0)
-		printf("ERROR on binding");
+		printf("ERROR on binding (sendStatus)\n");
 
 	if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
 		printf("ERROR opening socket");
@@ -217,7 +217,7 @@ int clientUDP()
 	bzero(&(serv_addr.sin_zero), 8);
 
 	if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(struct sockaddr)) < 0)
-		printf("ERROR on binding");
+		printf("ERROR on binding (clientUDP)\n");
 
 	clilen = sizeof(struct sockaddr_in);
 
