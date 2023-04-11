@@ -212,7 +212,7 @@ void *checkForElection()
 
     //////////////////////////////////////End of Socket Initialization///////////////////////////////
 
-    printf("After Socket Initialization on checkForElection 2\n");
+    printf("After Socket Initialization on checkForElection 7\n");
     fflush(stdout);
 
     while(1)
@@ -270,6 +270,7 @@ void *checkForElection()
         if (receiving.msgType != ELECTION_TABLE_LEADER && !isElecting) {
             pthread_t tid;
             pthread_create( &tid, NULL ,  electionRoutine, NULL);
+            sleep(3);
         }
     }
 
@@ -418,7 +419,7 @@ void *receiveNewConnections()
             sem_init(&semaphore,0,1);
             int *arg = malloc(sizeof(*arg));
             *arg = thisPC.pos;
-            printf("receiveNewConnections: Arg: %d, %d\n\n", thisPC.pos, *arg);
+            printf("checkCurrentStatus: Arg: %d, %d\n\n", thisPC.pos, *arg);
             pthread_create( &tid, NULL ,  checkCurrentStatus, arg);
         }
 	fflush(stdout);
@@ -603,6 +604,7 @@ void *receive_table(){
                 {
                     pthread_t tid;
                     pthread_create( &tid, NULL,  electionRoutine, NULL);
+                    sleep(3);
                 }
 
             }
@@ -623,6 +625,7 @@ void *receive_table(){
                 if (!isElecting) {
                     pthread_t tid;
                     pthread_create( &tid, NULL ,  electionRoutine, NULL);
+                    sleep(3);
                 }
                 controle = CONTROLTIMES;
             }
