@@ -1,0 +1,3 @@
+Como compilar o programa:
+
+gcc -o sleep_server2 NewInit.c -lpthread
